@@ -1512,9 +1512,11 @@ function render(filtered) {
     // Desaparece quando execucao === 100 (barra verde já comunica conclusão).
     if (p.execucao < 100) {
       if (p.status === 'atrasado') {
+        var motivoIcone = motivoProcessoExibivel_(p);
         var alertIcon = document.createElement('div');
         alertIcon.className = 'proc-alert';
         alertIcon.title = 'Processo atrasado' + (p.motivo ? ' — ' + p.motivo.substring(0, 80) : '');
+        alertIcon.title = 'Processo atrasado' + (motivoIcone ? ' - ' + motivoIcone.substring(0, 80) : '');
         alertIcon.innerHTML =
           '<svg viewBox="0 0 24 24" fill="none" stroke="#b02035" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
             '<circle cx="12" cy="12" r="10"/>' +
@@ -1704,6 +1706,23 @@ function toggleExpand(pid) {
  *   Clicar novamente na barra também o libera.
  */
 var tt = document.getElementById('tt');
+function motivoAtrasoValido_(motivo) {
+  var m = String(motivo || '').trim();
+  if (!m) return false;
+  if (m.toLowerCase() === 'a verificar') return false;
+  if (/^RETORNO PARA FILA:/i.test(m)) return false;
+  return true;
+}
+function motivoProcessoExibivel_(p) {
+  var etapas = Array.isArray(p && p.etapas) ? p.etapas : [];
+  for (var i = etapas.length - 1; i >= 0; i--) {
+    var et = etapas[i];
+    if (et && et.status === 'ok' && et.dias > 0 && motivoAtrasoValido_(et.motivo)) {
+      return String(et.motivo).trim();
+    }
+  }
+  return '';
+}
 var ttPinned = false;  // true quando o tooltip está fixado por clique
 
 /*
@@ -1743,10 +1762,14 @@ function showProcTT(e, p) {
     : '';
   // Trunca o motivo em 200 caracteres para não sobrecarregar o tooltip.
   // O texto completo continua disponível na planilha e nas etapas expandidas.
+  var motivoProc = motivoProcessoExibivel_(p);
   var MOTIVO_MAX = 200;
   var motivoTrunc = p.motivo && p.motivo.length > MOTIVO_MAX
     ? p.motivo.substring(0, MOTIVO_MAX).trimEnd() + '…'
     : (p.motivo || '');
+  motivoTrunc = motivoProc && motivoProc.length > MOTIVO_MAX
+    ? motivoProc.substring(0, MOTIVO_MAX).trimEnd() + '...'
+    : motivoProc;
 
   // Caixa de alerta/aviso varia conforme o status do processo:
   //   atrasado   → caixa vermelha com motivo do atraso
@@ -1815,7 +1838,7 @@ function showEtapaTT(e, p, et) {
   // motivos preenchidos manualmente em etapas que não atrasaram de fato.
   var motivoHtml = '';
   if (et.status === 'ok' && et.dias > 0) {
-    if (et.motivo && et.motivo.trim() && et.motivo.trim().toLowerCase() !== 'a verificar') {
+    if (motivoAtrasoValido_(et.motivo)) {
       motivoHtml = '<div class="tt-alert"><b>⚠ Motivo do atraso</b>' + esc(et.motivo) + '</div>';
     } else {
       motivoHtml = '<div class="tt-alert"><b>⚠ Motivo do atraso</b>A verificar</div>';
@@ -2308,7 +2331,7 @@ function renderMobileList(filtered) {
           body.appendChild(estat);
         }
         // Motivo do atraso — visível apenas quando a etapa foi concluída com atraso.
-        if (et.status === 'ok' && et.dias > 0 && et.motivo && et.motivo.trim()) {
+        if (et.status === 'ok' && et.dias > 0 && motivoAtrasoValido_(et.motivo)) {
           var mot = document.createElement('div');
           mot.className = 'mob-etapa-motivo';
           mot.textContent = '⚠ ' + et.motivo.substring(0, 120) + (et.motivo.length > 120 ? '…' : '');
