@@ -1067,7 +1067,28 @@ function getApiConfig_() {
   return { apiUrl: apiUrl };
 }
 
-function chamarApiPainel_(route, params) {
+function montarUrlApiPainel_(apiUrl, route, params, callbackName) {
+  var query = [
+    'route=' + encodeURIComponent(route),
+    '_=' + Date.now()
+  ];
+
+  if (callbackName) {
+    query.splice(1, 0, 'callback=' + encodeURIComponent(callbackName));
+  }
+
+  Object.keys(params || {}).forEach(function(key) {
+    var val = params[key];
+    if (val !== undefined && val !== null && val !== '') {
+      query.push(encodeURIComponent(key) + '=' + encodeURIComponent(String(val)));
+    }
+  });
+
+  var sep = apiUrl.indexOf('?') >= 0 ? '&' : '?';
+  return apiUrl + sep + query.join('&');
+}
+
+function chamarApiPainelJsonp_(route, params) {
   return new Promise(function(resolve, reject) {
     var cfg;
     try {
@@ -1078,20 +1099,6 @@ function chamarApiPainel_(route, params) {
     }
 
     var callbackName = '__painelCallback_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-    var query = [
-      'route=' + encodeURIComponent(route),
-      'callback=' + encodeURIComponent(callbackName),
-      '_=' + Date.now()
-    ];
-
-    Object.keys(params || {}).forEach(function(key) {
-      var val = params[key];
-      if (val !== undefined && val !== null && val !== '') {
-        query.push(encodeURIComponent(key) + '=' + encodeURIComponent(String(val)));
-      }
-    });
-
-    var sep = cfg.apiUrl.indexOf('?') >= 0 ? '&' : '?';
     var script = document.createElement('script');
     var timer;
 
@@ -1116,9 +1123,48 @@ function chamarApiPainel_(route, params) {
       reject(new Error('Tempo esgotado ao consultar o Apps Script.'));
     }, 30000);
 
-    script.src = cfg.apiUrl + sep + query.join('&');
+    script.src = montarUrlApiPainel_(cfg.apiUrl, route, params, callbackName);
     document.head.appendChild(script);
   });
+}
+
+function chamarApiPainel_(route, params) {
+  var cfg;
+  try {
+    cfg = getApiConfig_();
+  } catch(e) {
+    return Promise.reject(e);
+  }
+
+  if (!window.fetch) {
+    return chamarApiPainelJsonp_(route, params);
+  }
+
+  return fetch(montarUrlApiPainel_(cfg.apiUrl, route, params), {
+    method: 'GET',
+    cache: 'no-store',
+    credentials: 'omit',
+    redirect: 'follow'
+  })
+    .then(function(resp) {
+      if (!resp.ok) {
+        throw new Error('Apps Script respondeu HTTP ' + resp.status + '.');
+      }
+      return resp.text();
+    })
+    .then(function(txt) {
+      try {
+        return JSON.parse(txt);
+      } catch(e) {
+        throw new Error('A resposta do Apps Script nao veio em JSON valido.');
+      }
+    })
+    .catch(function(err) {
+      if (window.console && console.warn) {
+        console.warn('Fetch do Apps Script falhou; usando JSONP.', err);
+      }
+      return chamarApiPainelJsonp_(route, params);
+    });
 }
 
 /*
