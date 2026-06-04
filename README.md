@@ -137,7 +137,7 @@ Se a aba `Calendario` ainda nao existir, o painel continua funcionando com o fal
 
 ## Como adaptar para outro campus
 
-Para outro campus usar o mesmo modelo, o caminho recomendado e:
+Para outro campus usar o mesmo modelo, o caminho recomendado nesta fase e manter uma instalacao isolada por unidade:
 
 1. Copiar a planilha modelo e revisar as abas obrigatorias.
 2. Criar um Apps Script proprio para o App Gestao do campus.
@@ -147,10 +147,96 @@ Para outro campus usar o mesmo modelo, o caminho recomendado e:
    - um para o App Gestao;
    - outro para o Painel.
 6. Publicar os dois no GitHub Pages, cada um com seu `config.js`.
-7. Ajustar nomes de setor, equipe, modalidades e responsaveis na planilha/configuracao.
+7. Ajustar nomes de setor, equipe, modalidades, calendario, municipio e responsaveis na planilha/configuracao.
 8. Testar primeiro com dados ficticios antes de usar processos reais.
 
 Evite unir o backend do painel com o backend do app quando houver muitas funcoes. Separar deixa mais facil auditar permissoes, atualizar com calma e reduzir risco de quebrar o sistema interno.
+
+## Ideia futura: modelo multicampus / multitenant
+
+Depois de validar a Reitoria por 1 ou 2 meses, o projeto pode evoluir para um modelo multicampus. A ideia nao e misturar os dados dos campi em uma unica planilha, e sim permitir que uma mesma base visual do Painel seja reaproveitada por varias unidades com configuracoes diferentes.
+
+### Modelo atual recomendado
+
+```text
+Campus A
+  |-- Planilha A
+  |-- Apps Script do App Gestao A
+  |-- Apps Script do Painel A
+  |-- GitHub Pages do App A
+  `-- GitHub Pages do Painel A
+
+Campus B
+  |-- Planilha B
+  |-- Apps Script do App Gestao B
+  |-- Apps Script do Painel B
+  |-- GitHub Pages do App B
+  `-- GitHub Pages do Painel B
+```
+
+Esse modelo e mais seguro para a fase de piloto porque cada campus fica isolado. Se uma unidade precisar alterar equipe, municipio, calendario ou regras internas, isso nao interfere nas demais.
+
+### Evolucao possivel do Painel
+
+Uma evolucao natural seria criar um Painel multicampus com um arquivo de configuracao de unidades, por exemplo `campi.js` ou `tenants.js`:
+
+```js
+window.PAINEL_TENANTS = {
+  reitoria: {
+    nome: "Reitoria",
+    campus: "Reitoria",
+    apiUrl: "https://script.google.com/macros/s/DEPLOY_REITORIA/exec"
+  },
+  humaita: {
+    nome: "Humaita",
+    campus: "Humaita",
+    apiUrl: "https://script.google.com/macros/s/DEPLOY_HUMAITA/exec"
+  }
+};
+```
+
+Com isso, o mesmo `index.html` poderia abrir um campus especifico por parametro:
+
+```text
+https://.../painel-contratacoes-cpii/?campus=reitoria
+https://.../painel-contratacoes-cpii/?campus=humaita
+```
+
+O frontend escolheria a `apiUrl` conforme o campus selecionado. Cada `apiUrl` continuaria apontando para um Apps Script separado e somente leitura, conectado a planilha daquele campus.
+
+### Opcoes de expansao
+
+1. **Conservadora:** manter um repositorio/site por campus. E o melhor caminho para o piloto e para os primeiros testes com outras unidades.
+2. **Portal multicampus:** criar uma pagina inicial com links para os paineis de cada campus, sem alterar a arquitetura atual.
+3. **Painel multitenant:** usar um unico frontend do Painel com seletor de campus e um arquivo `tenants.js` apontando para os Apps Scripts publicos de cada unidade.
+4. **App Gestao multitenant:** deixar como possibilidade futura, mas nao recomendada agora. O App Gestao tem login, escrita, tokens, equipe, e-mails e acionadores; por isso exige muito mais cuidado do que o Painel publico.
+
+### Cuidados antes de virar multitenant
+
+- Padronizar as abas obrigatorias da planilha em todos os campi.
+- Garantir que `Processos`, `Etapas`, `Capacidade` e `Calendario` tenham os mesmos cabecalhos.
+- Definir um calendario por municipio/unidade.
+- Manter o Painel sempre somente leitura.
+- Evitar colocar ID real de planilha no repositorio publico.
+- Versionar com cuidado alteracoes no Apps Script de cada campus.
+- Ter um checklist minimo de homologacao antes de incluir uma nova unidade.
+
+### Principio de seguranca
+
+Mesmo em um modelo multicampus, a separacao de responsabilidades deve continuar:
+
+```text
+App Gestao do campus
+  escreve na planilha do campus
+
+Apps Script do Painel do campus
+  le a planilha do campus
+
+Painel publico
+  exibe dados consolidados, sem escrita
+```
+
+Assim, o Painel pode crescer para varios campi sem transformar o site publico em uma porta de escrita ou administracao interna.
 
 ## Checklist de validacao
 
