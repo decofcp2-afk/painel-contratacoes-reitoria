@@ -1296,6 +1296,22 @@ function isoToDD_MM_YY(iso) {
  * barX(moIdx, rangeStart) → posição left em px da barra
  *   Mês/Trimestre: (idxMês - rangeStart) × cellW + 4px de respiro
  */
+function addDiasIso_(iso, dias) {
+  if (!iso) return '';
+  var d = new Date(String(iso).substring(0,10) + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  d.setDate(d.getDate() + (dias || 0));
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function periodoRealizadoEtapa_(et) {
+  if (!et || !et.realizacao_iso) return null;
+  if (et.status === 'ok' && et.dias > 0 && et.fim_iso) {
+    return { label: 'Período de atraso', texto: isoToDD_MM(addDiasIso_(et.fim_iso, 1)) + ' -> ' + isoToDD_MM_YY(et.realizacao_iso) };
+  }
+  return { label: 'Realizado em', texto: isoToDD_MM_YY(et.realizacao_iso) };
+}
+
 function idxToISO(idx, fimDoMes) {
   var y = ANO_BASE + Math.floor(idx / 12);
   var m = ((idx % 12) + 12) % 12;
@@ -1384,7 +1400,7 @@ function getRange(data) {
 // STATUS_COLORS → mapeia o status da etapa para a classe CSS da barra colorida
 // STATUS_LABEL  → mapeia o status para o texto legível exibido no tooltip
 var STATUS_COLORS = { andamento:'b-andamento', atrasado:'b-atrasado', ok:'b-ok', planejamento:'b-planejamento', pendente:'b-pendente', aguardando:'b-aguardando', paralisado:'b-paralisado' };
-var STATUS_LABEL  = { andamento:'Em andamento', atrasado:'Atrasado', ok:'Concluído', planejamento:'A iniciar - Fila de Prioridade', pendente:'Pendente', aguardando:'Aguardando requisitante', paralisado:'Paralisado' };
+var STATUS_LABEL  = { andamento:'Em andamento', atrasado:'Atrasado', ok:'Concluído', planejamento:'A iniciar', pendente:'Pendente', aguardando:'Aguardando requisitante', paralisado:'Paralisado' };
 
 // ════════════════════════════════════════════════════════════════
 // RENDER — Constrói o Gantt no DOM a partir dos dados filtrados
@@ -1830,9 +1846,7 @@ function showEtapaTT(e, p, et) {
   // caso contrário usa o índice de mês calculado (comportamento anterior).
   // "Realizado" só aparece quando DataRealizacao foi preenchida na planilha.
   // Etapas em andamento ou não iniciadas ficam sem esta linha.
-  var realStr = et.realizacao_iso
-    ? isoToDD_MM(et.ini_iso) + ' → ' + isoToDD_MM_YY(et.realizacao_iso)
-    : null;
+  var realizadoInfo = periodoRealizadoEtapa_(et);
   var diasHtml   = (et.status === 'ok' && et.dias && et.dias > 0) ? '<div class="tt-row"><span class="tt-k">Atraso registrado</span><span class="tt-v bad">+' + et.dias + ' dia' + (et.dias > 1 ? 's' : '') + '</span></div>' : '';
   // Motivo só aparece se houver atraso real (et.dias > 0) — evita mostrar
   // motivos preenchidos manualmente em etapas que não atrasaram de fato.
@@ -1894,7 +1908,7 @@ function showEtapaTT(e, p, et) {
     '<div class="tt-head">' + esc(p.num) + ' · ' + esc(et.nome) + '</div>' +
     '<div class="tt-row"><span class="tt-k">Status</span>' + statusV + '</div>' +
     '<div class="tt-row"><span class="tt-k">Prazo 638/2026</span><span class="tt-v">' + prazoStr + '</span></div>' +
-    (realStr !== null ? '<div class="tt-row"><span class="tt-k">Realizado</span><span class="tt-v">' + realStr + '</span></div>' : '') +
+    (realizadoInfo ? '<div class="tt-row"><span class="tt-k">' + realizadoInfo.label + '</span><span class="tt-v">' + realizadoInfo.texto + '</span></div>' : '') +
     prazoRestanteHtml + diasHtml + motivoHtml;
   positionTT(e); tt.classList.add('show');
 }
@@ -2151,7 +2165,7 @@ function statusLabel(status, execucao) {
   if (status === 'aguardando')  return 'Aguardando';
   if (status === 'paralisado')  return 'Paralisado';
   if (status === 'andamento')   return 'Em andamento';
-  if (status === 'planejamento') return 'Fila / Planejamento';
+  if (status === 'planejamento') return 'A iniciar';
   return status;
 }
 function statusBadgeClass(status, execucao) {
@@ -2368,8 +2382,9 @@ function renderMobileList(filtered) {
           }
 
           // Realizado
-          if (et.realizacao_iso) {
-            addRow('Realizado', isoToDD_MM(et.ini_iso) + ' → ' + isoToDD_MM_YY(et.realizacao_iso), null);
+          var realizadoInfoMob = periodoRealizadoEtapa_(et);
+          if (realizadoInfoMob) {
+            addRow(realizadoInfoMob.label, realizadoInfoMob.texto, null);
           }
 
           // Prazo restante — mesma lógica do tooltip desktop
