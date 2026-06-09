@@ -86,8 +86,16 @@ var CAP_DATA_START_ROW_FALLBACK = 16;
 // prazos dos blocos pré-formatados da aba Etapas (referência/validação);
 // FASE_EXTERNA é usada diretamente por faseExternaDias().
 // ════════════════════════════════════════════════════════════════════════
+// ── Contagem de prazos ────────────────────────────────────────────────────
+// 'corridos' = dias corridos puros: conta TODOS os dias (fins de semana e
+//              feriados incluídos). Modo atual, definido pela gestão.
+// 'uteis'    = dias úteis: pula sábados, domingos e feriados (fixos + aba
+//              Calendario). Os feriados continuam definidos no código e
+//              voltam a valer automaticamente se este modo for reativado.
+var MODO_CONTAGEM_PRAZOS = 'corridos';
+
 var PORTARIA_638 = {
-  // Fase interna (dias úteis) — ordem das etapas
+  // Fase interna (dias — contagem conforme MODO_CONTAGEM_PRAZOS) — ordem das etapas
   ETAPAS_INTERNAS: {
     'Designação da equipe':                 5,
     'ETP + Mapa de Riscos + Pesquisa de Preços': 45,
@@ -97,7 +105,7 @@ var PORTARIA_638 = {
     'Versão final do TR e demais documentos': 10,
     'Envio ao SEL/SEPMA':                    3
   },
-  // Fase externa (dias úteis) por modalidade
+  // Fase externa (dias — contagem conforme MODO_CONTAGEM_PRAZOS) por modalidade
   FASE_EXTERNA: {
     DIRETA:       30,   // Contratação Direta / Dispensa / Inexigibilidade
     PREGAO:       90,   // Pregão Eletrônico
@@ -491,7 +499,9 @@ function getDados() {
     var filaDisplayCursor = new Date();
     filaDisplayCursor.setHours(0, 0, 0, 0);
     filaDisplayCursor = new Date(filaDisplayCursor.getFullYear(), filaDisplayCursor.getMonth() + 1, 1);
-    while (!isDiaUtil(filaDisplayCursor)) filaDisplayCursor.setDate(filaDisplayCursor.getDate() + 1);
+    if (MODO_CONTAGEM_PRAZOS === 'uteis') {
+      while (!isDiaUtil(filaDisplayCursor)) filaDisplayCursor.setDate(filaDisplayCursor.getDate() + 1);
+    }
 
     // ── Processa cada processo ────────────────────────────────────────────
     var resultado = processos.map(function(p) {
@@ -654,24 +664,11 @@ function getDados() {
       // Para o "Período" do processo usamos fim_real_iso (data real com atraso),
       // não fim_iso (prazo puro) — queremos mostrar até quando o processo realmente durou.
       var procFimIso = etapasCalc.length ? etapasCalc[etapasCalc.length - 1].fim_real_iso : null;
-      if (d0Simulado && procFimIso) {
-        var FILA_VISUAL_DIAS = 150;
-        var fimVisual = adicionarDiasUteis(new Date(d0.getTime()), FILA_VISUAL_DIAS);
-        fim2 = dateToMonthIdx(fimVisual);
-        procFimIso = isoLocal_(fimVisual);
-        var nEtapasVis = etapasCalc.length || 1;
-        etapasCalc.forEach(function(et, idxEt) {
-          var iniVis = adicionarDiasUteis(new Date(d0.getTime()), Math.round((FILA_VISUAL_DIAS / nEtapasVis) * idxEt));
-          var fimVis = adicionarDiasUteis(new Date(d0.getTime()), Math.round((FILA_VISUAL_DIAS / nEtapasVis) * (idxEt + 1)));
-          et.prazo_ini = dateToMonthIdx(iniVis);
-          et.prazo_fim = dateToMonthIdx(fimVis);
-          et.real_ini = et.prazo_ini;
-          et.real_fim = et.prazo_fim;
-          et.ini_iso = isoLocal_(iniVis);
-          et.fim_iso = isoLocal_(fimVis);
-          et.fim_real_iso = et.fim_iso;
-        });
-      }
+      // Processos na fila (D0 simulado): as etapas seguem a cascata normal
+      // calculada acima a partir do D0 simulado, usando o "Prazo (dias)" de
+      // cada etapa (Portaria 638/2026). A antiga projeção visual de 150 dias
+      // distribuídos igualmente entre as etapas foi removida — os prazos
+      // exibidos para "A iniciar" agora refletem o padrão da Portaria.
 
       return {
         id:         pid,
@@ -2297,18 +2294,14 @@ function concluirProcesso() {
 
 
 // ════════════════════════════════════════════════════════════════════════
-// DIAS ÚTEIS — cálculo de datas excluindo fins de semana e feriados
+// CONTAGEM DE PRAZOS — controlada por MODO_CONTAGEM_PRAZOS (definida no topo)
 //
-// adicionarDiasUteis(data, qtdDias) avança a data ignorando:
-//   - Sábados e domingos
-//   - Feriados nacionais FIXOS (não variam de ano para ano)
+// Modo atual: 'corridos' — adicionarDiasUteis/contarDiasUteis contam TODOS
+// os dias de calendário (fins de semana e feriados incluídos).
 //
-// Feriados MÓVEIS (Carnaval, Sexta-feira Santa, Corpus Christi) NÃO estão
-// incluídos pois variam a cada ano. Se quiser adicioná-los no futuro,
-// inclua as datas no array FERIADOS_MOVEIS para o ano desejado.
-//
-// Feriados municipais do Rio de Janeiro também NÃO estão incluídos por
-// padrão — adicionar manualmente se necessário.
+// Toda a infraestrutura de feriados abaixo (FERIADOS_FIXOS + aba Calendario)
+// foi mantida: se MODO_CONTAGEM_PRAZOS voltar a 'uteis', o cálculo volta a
+// excluir sábados, domingos e feriados automaticamente.
 // ════════════════════════════════════════════════════════════════════════
 
 // Feriados nacionais FIXOS no formato "MM-DD" (valem para qualquer ano)
@@ -2454,12 +2447,17 @@ function isDiaUtil(d) {
   return dow !== 0 && dow !== 6 && !isFeriadoFixo(d) && !calendarioFeriadosMap_()[isoLocal_(d)];
 }
 
-// Avança uma data em N dias úteis.
-// Exemplo: adicionarDiasUteis(sex 18/04, 5) → sex 25/04 (pula 19/04 Páscoa não,
-//   mas pula sáb 19 e dom 20 → seg 21 = Tiradentes (feriado, pula) →
-//   ter 22, qua 23, qui 24, sex 25 = 4 úteis... assim por diante)
+// Avança uma data em N dias de prazo, conforme MODO_CONTAGEM_PRAZOS:
+//   'corridos' → soma N dias de calendário, sem pular nada.
+//   'uteis'    → pula sáb/dom e feriados (isDiaUtil).
 // Se qtdDias = 0, retorna a própria data (sem avançar).
+// O nome "DiasUteis" foi mantido para não alterar dezenas de chamadas.
 function adicionarDiasUteis(dataBase, qtdDias) {
+  if (MODO_CONTAGEM_PRAZOS !== 'uteis') {
+    var dc = new Date(dataBase.getTime());
+    if (qtdDias > 0) dc.setDate(dc.getDate() + qtdDias);
+    return dc;
+  }
   var d = new Date(dataBase.getTime());
   var restante = qtdDias;
   while (restante > 0) {
@@ -2471,14 +2469,18 @@ function adicionarDiasUteis(dataBase, qtdDias) {
 
 
 /*
- * contarDiasUteis(dataA, dataB) → número de dias úteis entre dataA e dataB.
+ * contarDiasUteis(dataA, dataB) → número de dias de prazo entre dataA e dataB,
+ * conforme MODO_CONTAGEM_PRAZOS ('corridos' = dias de calendário; 'uteis' = isDiaUtil).
  * Resultado positivo → dataB é depois de dataA (atraso).
  * Resultado negativo → dataB é antes de dataA (adiantamento).
- * Usa a mesma definição de "dia útil" de adicionarDiasUteis() (isDiaUtil).
+ * O nome "DiasUteis" foi mantido para não alterar dezenas de chamadas.
  */
 function contarDiasUteis(dataA, dataB) {
-  var a = new Date(dataA.getTime());
-  var b = new Date(dataB.getTime());
+  var a = new Date(dataA.getTime()); a.setHours(0,0,0,0);
+  var b = new Date(dataB.getTime()); b.setHours(0,0,0,0);
+  if (MODO_CONTAGEM_PRAZOS !== 'uteis') {
+    return Math.round((b.getTime() - a.getTime()) / 86400000);
+  }
   var sinal = 1;
   if (a.getTime() > b.getTime()) { var tmp = a; a = b; b = tmp; sinal = -1; }
   var count = 0;
@@ -2742,7 +2744,7 @@ function onEditAtraso(e) {
   var ui = SpreadsheetApp.getUi();
   var resp = ui.prompt(
     '⚠ Atraso detectado',
-    'Esta etapa terminou ' + diasAtraso + ' dia' + (diasAtraso > 1 ? 's úteis' : ' útil') +
+    'Esta etapa terminou ' + diasAtraso + ' dia' + (diasAtraso > 1 ? 's' : '') +
     ' depois do prazo previsto.\n\nPor favor, informe o motivo do atraso:',
     ui.ButtonSet.OK_CANCEL
   );

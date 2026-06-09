@@ -111,11 +111,15 @@ O campo `Custom domain` deve ficar vazio enquanto nao houver um dominio instituc
 
 ## Calendario de feriados oficiais
 
-O painel calcula prazos, atrasos, Gantt e capacidade usando dias uteis. A regra atual considera:
+O painel calcula prazos, atrasos, Gantt e capacidade em **dias corridos** (todos os dias contam, inclusive fins de semana e feriados). O modo e controlado pela constante `MODO_CONTAGEM_PRAZOS` no `Code.gs`.
+
+Se a constante for alterada para `'uteis'`, o calculo volta a excluir:
 
 - sabados e domingos;
 - feriados nacionais fixos;
 - feriados oficiais cadastrados na aba `Calendario`.
+
+Toda a infraestrutura de feriados abaixo continua valida para esse caso.
 
 A aba `Calendario` deve ter:
 

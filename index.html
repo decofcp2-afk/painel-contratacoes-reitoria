@@ -1370,35 +1370,15 @@ function isFilaVisual_(p) {
 }
 
 function ajustarFilaVisual(data) {
-  var iniBase = todayIdx() + 1;
-  var fimMax = todayIdx() + 8;
-  var filaIdx = 0;
-
+  // Os prazos dos processos "A iniciar" NÃO são mais redesenhados aqui com
+  // durações arbitrárias (barras escalonadas de ~4 meses). O backend já
+  // calcula a cascata a partir do D0 simulado usando o "Prazo (dias)" de
+  // cada etapa (Portaria 638/2026) — o Gantt exibe esses valores direto.
+  // Esta função apenas garante a marcação d0_simulado para o rótulo
+  // "Previsão exibida" do tooltip.
   (data || []).forEach(function(p) {
     if (!isFilaVisual_(p)) return;
-
-    var ini = iniBase + Math.min(filaIdx, 5);
-    var fim = Math.min(ini + 3, fimMax);
-    filaIdx++;
-
     p.d0_simulado = true;
-    p.inicio = ini;
-    p.fim = fim;
-    p.ini_iso = idxToISO(ini, false);
-    p.fim_iso = idxToISO(fim, true);
-
-    var etapas = p.etapas || [];
-    var n = etapas.length || 1;
-    etapas.forEach(function(et, i) {
-      var etIni = ini + Math.floor(((fim - ini + 1) * i) / n);
-      var etFim = ini + Math.floor(((fim - ini + 1) * (i + 1) - 1) / n);
-      if (etFim < etIni) etFim = etIni;
-      if (etFim > fim) etFim = fim;
-      et.prazo_ini = et.real_ini = etIni;
-      et.prazo_fim = et.real_fim = etFim;
-      et.ini_iso = idxToISO(etIni, false);
-      et.fim_iso = et.fim_real_iso = idxToISO(etFim, true);
-    });
   });
 
   return data || [];
