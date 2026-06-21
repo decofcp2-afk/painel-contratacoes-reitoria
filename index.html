@@ -762,6 +762,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
     <span class="brand-chip">DECOF-LIC</span>
   </div>
   <div class="top-right">
+    <button class="top-meta" id="btn-visao-geral" onclick="abrirVisaoGeral()" title="Visão geral de todas as unidades (Diretor)" style="cursor:pointer">⚙️ Visão Geral</button>
     <a class="top-meta top-meta-link" href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/944690/" target="_blank" title="Abrir Portaria 638/2026 no SUAP">📄 Portaria 638/2026</a>
     <a class="top-meta top-meta-link" href="https://decofcp2-afk.github.io/proad-fluxos/" target="_blank" title="Abrir fluxos internos da PROAD">🔗 Fluxos PROAD</a>
     <a class="top-meta top-meta-link" href="https://portalespiral.cp2.g12.br/index.php/materialinstitucional/article/view/4903/2825" target="_blank" title="Manual POP — Procedimentos Operacionais Padrão">📋 POP</a>
@@ -2699,5 +2700,52 @@ carregarDados();
   ───────────────────────────────────────────────────────────── -->
 <div id="tt" class="tt"></div>
 
+<!-- ───────── Visão Geral das Unidades (Diretor) ───────── -->
+<div id="vg-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,18,33,.6);backdrop-filter:blur(2px);align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto" onclick="if(event.target===this)fecharVisaoGeral()">
+  <div style="background:var(--surface,#fff);color:var(--text,#0b1d33);max-width:920px;width:100%;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--cpii-navy,#0b1d33);color:#fff">
+      <strong style="font-size:16px;letter-spacing:.3px">⚙️ Visão Geral das Unidades</strong>
+      <button onclick="fecharVisaoGeral()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div id="vg-body" style="padding:18px 20px;font-size:14px">Carregando…</div>
+  </div>
+</div>
+<style>
+  #vg-modal .vg-tb{width:100%;border-collapse:collapse;font-size:13px}
+  #vg-modal .vg-tb th,#vg-modal .vg-tb td{padding:8px 10px;text-align:center;border-bottom:1px solid rgba(0,0,0,.08)}
+  #vg-modal .vg-tb th:first-child,#vg-modal .vg-tb td:first-child{text-align:left}
+  #vg-modal .vg-tb thead th{background:rgba(201,162,42,.15);font-weight:700}
+  #vg-modal .vg-tb tfoot th{background:rgba(11,29,51,.06);font-weight:700;border-top:2px solid rgba(0,0,0,.15)}
+</style>
+<script>
+function abrirVisaoGeral(){
+  var code = (window.PAINEL_CONFIG && window.PAINEL_CONFIG.diretorCodigo) || 'diretor-cpii';
+  var t = prompt('Código do diretor para abrir a Visão Geral:');
+  if (t === null) return;
+  if (String(t).trim() !== code){ alert('Código incorreto.'); return; }
+  var modal = document.getElementById('vg-modal');
+  var body = document.getElementById('vg-body');
+  modal.style.display = 'flex';
+  body.innerHTML = 'Carregando unidades…';
+  if (!(window.PainelFirestore && window.PainelFirestore.carregarVisaoGeral)){
+    body.innerHTML = 'Indisponível (leitura via Firestore desligada).'; return;
+  }
+  window.PainelFirestore.carregarVisaoGeral().then(function(rows){
+    rows.sort(function(a,b){ return (b.atrasados-a.atrasados) || (b.andamento-a.andamento); });
+    var tot={u:rows.length,proc:0,and:0,atr:0,fila:0,conc:0};
+    rows.forEach(function(r){ tot.proc+=r.totalProcessos; tot.and+=r.andamento; tot.atr+=r.atrasados; tot.fila+=r.fila; tot.conc+=r.concluidos; });
+    var h='<table class="vg-tb"><thead><tr><th>Unidade</th><th>Proc.</th><th>Andamento</th><th>Atrasados</th><th>Em fila</th><th>Concluídos</th><th>% médio</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      h+='<tr><td>'+(r.sigla?'<b>'+r.sigla+'</b> · ':'')+(r.nome||r.id)+(r.ativo?'':' <span style="opacity:.5">(inativa)</span>')+'</td>'
+        +'<td>'+r.totalProcessos+'</td><td>'+r.andamento+'</td>'
+        +'<td>'+(r.atrasados?'<b style="color:#b02035">'+r.atrasados+'</b>':'0')+'</td>'
+        +'<td>'+r.fila+'</td><td>'+r.concluidos+'</td><td>'+r.execucaoMedia+'%</td></tr>';
+    });
+    h+='</tbody><tfoot><tr><th>TOTAL ('+tot.u+')</th><th>'+tot.proc+'</th><th>'+tot.and+'</th><th>'+tot.atr+'</th><th>'+tot.fila+'</th><th>'+tot.conc+'</th><th>—</th></tr></tfoot></table>';
+    body.innerHTML = h;
+  }).catch(function(e){ body.innerHTML = 'Erro ao carregar: '+((e&&e.message)||e); });
+}
+function fecharVisaoGeral(){ document.getElementById('vg-modal').style.display='none'; }
+</script>
 </body>
 </html>

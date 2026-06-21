@@ -269,8 +269,49 @@
     });
   }
 
+  // ── Visão Geral do Diretor: KPIs consolidados de TODAS as unidades ───────
+  // Lê a coleção `unidades` e, para cada uma, computa os KPIs no cliente
+  // reaproveitando construirProcessos (mesma lógica do painel, inclui 'fila').
+  // (Futuro: ler de unidades/{u}/resumo/atual via collectionGroup p/ custo fixo.)
+  function carregarVisaoGeral() {
+    var cfg = (root.PAINEL_CONFIG && root.PAINEL_CONFIG.firebase) || null;
+    if (!cfg || !root.firebase) return Promise.reject(new Error('Firebase nao configurado.'));
+    if (!root.firebase.apps || !root.firebase.apps.length) root.firebase.initializeApp(cfg);
+    var db = root.firebase.firestore();
+    return db.collection('unidades').get().then(function (unids) {
+      var tarefas = unids.docs.map(function (ud) {
+        var u = ud.data(); u._id = ud.id;
+        var base = db.collection('unidades').doc(ud.id);
+        return Promise.all([
+          base.collection('processos').get(),
+          base.collection('etapas').get()
+        ]).then(function (s) {
+          var procs = s[0].docs.map(function (d) { var o = d.data(); o._id = d.id; return o; });
+          var etps = s[1].docs.map(function (d) { var o = d.data(); o._id = d.id; return o; });
+          var ps = construirProcessos(procs, etps).processos;
+          function conta(fn) { return ps.filter(fn).length; }
+          var concl = conta(function (p) { return p.status === 'ok' || p.execucao === 100; });
+          var atras = conta(function (p) { return p.status === 'atrasado' && p.execucao < 100; });
+          var fila = conta(function (p) { return p.status === 'fila' || p.status === 'planejamento'; });
+          var andam = conta(function (p) { return (p.status === 'andamento' || p.status === 'aguardando' || p.status === 'paralisado' || (p.status === 'atrasado' && p.execucao < 100)); });
+          var execM = ps.length ? Math.round(ps.reduce(function (a, p) { return a + (p.execucao || 0); }, 0) / ps.length) : 0;
+          return {
+            id: ud.id, nome: u.nome || ud.id, sigla: u.sigla || '', ativo: u.ativo !== false,
+            totalProcessos: ps.length, andamento: andam, atrasados: atras,
+            fila: fila, concluidos: concl, execucaoMedia: execM
+          };
+        }).catch(function () {
+          return { id: ud.id, nome: u.nome || ud.id, sigla: u.sigla || '', ativo: u.ativo !== false,
+            totalProcessos: 0, andamento: 0, atrasados: 0, fila: 0, concluidos: 0, execucaoMedia: 0, erro: true };
+        });
+      });
+      return Promise.all(tarefas);
+    });
+  }
+
   root.PainelFirestore = {
     construirProcessos: construirProcessos,
+    carregarVisaoGeral: carregarVisaoGeral,
     carregar: carregar
   };
 

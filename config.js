@@ -9,6 +9,9 @@ window.PAINEL_CONFIG = {
   // Unidade (multiunidade). Default; o Painel tambem aceita ?u= na URL.
   unidadeId: "reitoria-sel",
 
+  // Codigo para abrir a aba "Visao Geral" (Diretor). Troque por um seu.
+  diretorCodigo: "diretor-cpii",
+
   // Firestore (leitura direta — substitui as chamadas de consulta ao Apps Script).
   // A apiKey abaixo NAO e segredo: quem protege os dados sao as regras do Firestore.
   firebase: {
