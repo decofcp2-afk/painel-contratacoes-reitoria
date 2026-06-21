@@ -16,6 +16,17 @@ secrets.*
 credentials.*
 *.local
 
+# Chaves de servico e credenciais do Firebase/Google Cloud (migracao Firestore).
+# Nunca versionar a chave privada da conta de servico.
+serviceAccount*.json
+*service-account*.json
+*serviceaccountkey*.json
+firebase-adminsdk*.json
+*-firebase-adminsdk-*.json
+google-services.json
+.firebaserc.local
+firebase-debug.log
+
 # Metadados do sistema.
 Thumbs.db
 .DS_Store

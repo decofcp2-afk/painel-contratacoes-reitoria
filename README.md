@@ -59,14 +59,17 @@ Na pratica:
 
 ```text
 .
-|-- index.html              pagina estatica publicada no GitHub Pages
-|-- config.js               URL publica do Apps Script do painel
-|-- README.md               documentacao do projeto
-|-- .gitignore              bloqueia arquivos sensiveis
+|-- index.html                  pagina estatica publicada no GitHub Pages
+|-- config.js                   URL publica do Apps Script do painel
+|-- README.md                   documentacao do projeto
+|-- CHECKLIST_PUBLICACAO.md     passo a passo de publicacao e testes
+|-- .gitignore                  bloqueia arquivos sensiveis (inclui chaves Firebase)
 |-- LICENSE
 `-- apps-script/
-    `-- Code.gs             backend somente leitura para copiar no Apps Script
+    `-- Code.gs                 backend somente leitura para copiar no Apps Script
 ```
+
+> **Migracao planejada:** a base de dados sera movida da planilha para o Firestore (modelo hibrido, plano gratuito). O painel seguira publico e somente leitura. Detalhes no `PLANO_ORGANIZACAO_E_MIGRACAO.md` (repositorio do App Gestao).
 
 ## Configuracao
 
