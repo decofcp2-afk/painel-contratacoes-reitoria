@@ -239,6 +239,15 @@
     return { processos: resultado, geradoEm: new Date().toISOString() };
   }
 
+  // Unidade alvo: ?u= na URL (índice público) ou config; default reitoria-sel.
+  function _unidadeId() {
+    try {
+      var u = new URLSearchParams(root.location.search).get('u');
+      if (u) return u.trim();
+    } catch (e) {}
+    return (root.PAINEL_CONFIG && root.PAINEL_CONFIG.unidadeId) || 'reitoria-sel';
+  }
+
   // ── Leitura do Firestore (navegador, SDK compat) ────────────────────────
   function carregar() {
     var cfg = (root.PAINEL_CONFIG && root.PAINEL_CONFIG.firebase) || null;
@@ -249,9 +258,10 @@
       root.firebase.initializeApp(cfg);
     }
     var db = root.firebase.firestore();
+    var base = db.collection('unidades').doc(_unidadeId());
     return Promise.all([
-      db.collection('processos').get(),
-      db.collection('etapas').get()
+      base.collection('processos').get(),
+      base.collection('etapas').get()
     ]).then(function (snaps) {
       var procs = snaps[0].docs.map(function (d) { var o = d.data(); o._id = d.id; return o; });
       var etps = snaps[1].docs.map(function (d) { var o = d.data(); o._id = d.id; return o; });
