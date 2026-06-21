@@ -9,8 +9,10 @@ window.PAINEL_CONFIG = {
   // Unidade (multiunidade). Default; o Painel tambem aceita ?u= na URL.
   unidadeId: "reitoria-sel",
 
-  // Codigo para abrir a aba "Visao Geral" (Diretor). Troque por um seu.
-  diretorCodigo: "diretor-cpii",
+  // Acesso a aba "Visao Geral" (Diretor). TRAVA LEVE: por ser arquivo estatico
+  // publico, estas credenciais ficam visiveis no codigo-fonte; os dados do painel
+  // ja sao publicos. Senha 1234 e TEMPORARIA — trocar. (Ideal futuro: auth via Apps Script.)
+  diretorAuth: { matricula: "2105851", senha: "1234", emailRedefinicao: "decof.cp2@gmail.com" },
 
   // Firestore (leitura direta — substitui as chamadas de consulta ao Apps Script).
   // A apiKey abaixo NAO e segredo: quem protege os dados sao as regras do Firestore.

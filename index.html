@@ -2719,13 +2719,28 @@ carregarDados();
 </style>
 <script>
 function abrirVisaoGeral(){
-  var code = (window.PAINEL_CONFIG && window.PAINEL_CONFIG.diretorCodigo) || 'diretor-cpii';
-  var t = prompt('Código do diretor para abrir a Visão Geral:');
-  if (t === null) return;
-  if (String(t).trim() !== code){ alert('Código incorreto.'); return; }
-  var modal = document.getElementById('vg-modal');
+  document.getElementById('vg-modal').style.display = 'flex';
+  document.getElementById('vg-body').innerHTML =
+    '<form onsubmit="vgEntrar(event)" style="max-width:340px;margin:6px auto;display:flex;flex-direction:column;gap:10px">'
+    + '<div style="font-weight:700;text-align:center;margin-bottom:4px">Acesso do Diretor</div>'
+    + '<input id="vg-mat" type="text" placeholder="Matrícula" style="padding:9px;border:1px solid rgba(0,0,0,.2);border-radius:6px">'
+    + '<input id="vg-senha" type="password" placeholder="Senha" autocomplete="current-password" style="padding:9px;border:1px solid rgba(0,0,0,.2);border-radius:6px">'
+    + '<button type="submit" style="padding:10px;background:var(--cpii-navy,#0b1d33);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">Entrar</button>'
+    + '<div id="vg-erro" style="color:#b02035;font-size:13px;min-height:16px;text-align:center"></div>'
+    + '<div style="font-size:11px;opacity:.6;text-align:center">Redefinição de senha: decof.cp2@gmail.com</div>'
+    + '</form>';
+  setTimeout(function(){ var e=document.getElementById('vg-mat'); if(e) e.focus(); }, 50);
+}
+function vgEntrar(ev){
+  ev.preventDefault();
+  var a = (window.PAINEL_CONFIG && window.PAINEL_CONFIG.diretorAuth) || {};
+  var mat = (document.getElementById('vg-mat').value||'').trim();
+  var senha = (document.getElementById('vg-senha').value||'');
+  if (mat !== String(a.matricula||'') || senha !== String(a.senha||'')){
+    document.getElementById('vg-erro').textContent = 'Matrícula ou senha incorretos.';
+    return;
+  }
   var body = document.getElementById('vg-body');
-  modal.style.display = 'flex';
   body.innerHTML = 'Carregando unidades…';
   if (!(window.PainelFirestore && window.PainelFirestore.carregarVisaoGeral)){
     body.innerHTML = 'Indisponível (leitura via Firestore desligada).'; return;
