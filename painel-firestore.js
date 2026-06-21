@@ -192,8 +192,17 @@
       var temAguardando = etapasCalc.some(function (e) { return e.status === 'aguardando'; });
       var temParalisado = etapasCalc.some(function (e) { return e.status === 'paralisado'; });
       var statusBase = normalizeStatus(String(p.status || '').trim());
+      // Devolvido à fila: etapa com status 'retornado' OU motivo "retorno para fila:".
+      // O status da etapa é preservado (ex.: "Em andamento"), então o sinal confiável
+      // é o motivo. Retornados não contam como andamento — viram status 'fila'.
+      var temRetorno = etps.some(function (e) {
+        var st = String(e.status || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        var mt = String(e.motivoAtraso || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+        return (st.indexOf('retorn') >= 0 && st.indexOf('fila') >= 0) || mt.indexOf('retorno para fila:') === 0;
+      });
       var statusGeral;
-      if (d0Simulado) statusGeral = 'planejamento';
+      if (temRetorno) statusGeral = 'fila';
+      else if (d0Simulado) statusGeral = 'planejamento';
       else if (temAtrasada) statusGeral = 'atrasado';
       else if (temAguardando) statusGeral = 'aguardando';
       else if (temParalisado) statusGeral = 'paralisado';

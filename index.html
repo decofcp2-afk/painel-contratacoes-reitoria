@@ -840,7 +840,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
       <button class="status-btn active-all" data-s="" onclick="setStatusFilter(this,'')">Todos</button>
       <button class="status-btn" data-s="andamento" onclick="setStatusFilter(this,'andamento')">Andamento</button>
       <button class="status-btn" data-s="atrasado"  onclick="setStatusFilter(this,'atrasado')">Atrasado</button>
-      <button class="status-btn" data-s="planejamento" onclick="setStatusFilter(this,'planejamento')">A iniciar</button>
+      <button class="status-btn" data-s="planejamento" onclick="setStatusFilter(this,'planejamento')">Em fila</button>
     </div>
   </div>
   <div class="fg">
@@ -1442,8 +1442,8 @@ function getRange(data) {
 
 // STATUS_COLORS → mapeia o status da etapa para a classe CSS da barra colorida
 // STATUS_LABEL  → mapeia o status para o texto legível exibido no tooltip
-var STATUS_COLORS = { andamento:'b-andamento', atrasado:'b-atrasado', ok:'b-ok', planejamento:'b-planejamento', pendente:'b-pendente', aguardando:'b-aguardando', paralisado:'b-paralisado' };
-var STATUS_LABEL  = { andamento:'Em andamento', atrasado:'Atrasado', ok:'Concluído', planejamento:'A iniciar', pendente:'Pendente', aguardando:'Aguardando requisitante', paralisado:'Paralisado', naoaplica:'Não se aplica' };
+var STATUS_COLORS = { andamento:'b-andamento', atrasado:'b-atrasado', ok:'b-ok', planejamento:'b-planejamento', fila:'b-planejamento', pendente:'b-pendente', aguardando:'b-aguardando', paralisado:'b-paralisado' };
+var STATUS_LABEL  = { andamento:'Em andamento', atrasado:'Atrasado', ok:'Concluído', planejamento:'A iniciar', fila:'Em fila', pendente:'Pendente', aguardando:'Aguardando requisitante', paralisado:'Paralisado', naoaplica:'Não se aplica' };
 
 // ════════════════════════════════════════════════════════════════
 // RENDER — Constrói o Gantt no DOM a partir dos dados filtrados
@@ -2200,6 +2200,7 @@ function statusLabel(status, execucao) {
   if (status === 'aguardando')  return 'Aguardando';
   if (status === 'paralisado')  return 'Paralisado';
   if (status === 'andamento')   return 'Em andamento';
+  if (status === 'fila')        return 'Em fila';
   if (status === 'planejamento') return 'A iniciar';
   return status;
 }
@@ -2510,14 +2511,17 @@ function applyFilters() {
     var matchQ = !q || (p.num + ' ' + p.nome).toLowerCase().indexOf(q) >= 0;
     var matchS;
     if (!activeStatus) {
-      // "Todos" = em andamento + atrasados + concluidos; exclui fila (planejamento)
-      matchS = p.status !== 'planejamento';
+      // "Todos" = em andamento + atrasados + concluidos; exclui a fila (a iniciar + retornados)
+      matchS = p.status !== 'planejamento' && p.status !== 'fila';
     } else if (activeStatus === 'andamento') {
       // "Andamento" inclui processos em andamento E os atrasados ainda nao concluidos
       matchS = p.status === 'andamento' || p.status === 'aguardando' || p.status === 'paralisado' || (p.status === 'atrasado' && p.execucao < 100);
     } else if (activeStatus === 'atrasado') {
       // "Atrasado" mostra apenas os atrasados nao concluidos
       matchS = p.status === 'atrasado' && p.execucao < 100;
+    } else if (activeStatus === 'planejamento') {
+      // "Em fila" = processos nunca iniciados (planejamento) + devolvidos à fila (fila)
+      matchS = p.status === 'planejamento' || p.status === 'fila';
     } else {
       matchS = p.status === activeStatus;
     }
@@ -2578,7 +2582,7 @@ function updateKPIs(filtered) {
   // "Atrasados" exclui processos já concluídos (mesmo que tenham tido atraso)
   document.getElementById('kv-atra').textContent = kpiVal(atrasadosAtivos.length);
   var basePlan = activeStatus ? filtered : DATA;
-  document.getElementById('kv-plan').textContent = kpiVal(basePlan.filter(function(p){ return p.status === 'planejamento'; }).length);
+  document.getElementById('kv-plan').textContent = kpiVal(basePlan.filter(function(p){ return p.status === 'planejamento' || p.status === 'fila'; }).length);
   document.getElementById('kv-conc').textContent = kpiVal(concluidos.length);
 }
 
