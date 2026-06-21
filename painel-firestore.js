@@ -239,13 +239,32 @@
     return { processos: resultado, geradoEm: new Date().toISOString() };
   }
 
-  // Unidade alvo: ?u= na URL (índice público) ou config; default reitoria-sel.
+  // Unidade alvo (prioridade): ?u= na URL (link direto, e persiste) → última
+  // unidade escolhida (localStorage) → config → reitoria-sel.
   function _unidadeId() {
     try {
       var u = new URLSearchParams(root.location.search).get('u');
-      if (u) return u.trim();
+      if (u) { try { root.localStorage.setItem('painel_unidade', u.trim()); } catch (e) {} return u.trim(); }
+      var ls = root.localStorage.getItem('painel_unidade');
+      if (ls) return ls;
     } catch (e) {}
     return (root.PAINEL_CONFIG && root.PAINEL_CONFIG.unidadeId) || 'reitoria-sel';
+  }
+
+  // Lista as unidades cadastradas (para o seletor público).
+  function listarUnidades() {
+    var cfg = (root.PAINEL_CONFIG && root.PAINEL_CONFIG.firebase) || null;
+    if (!cfg || !root.firebase) return Promise.reject(new Error('Firebase nao configurado.'));
+    if (!root.firebase.apps || !root.firebase.apps.length) root.firebase.initializeApp(cfg);
+    return root.firebase.firestore().collection('unidades').get().then(function (snap) {
+      return snap.docs.map(function (d) {
+        var o = d.data();
+        return { id: d.id, nome: o.nome || d.id, sigla: o.sigla || '', ativo: o.ativo !== false };
+      }).sort(function (a, b) {
+        if (a.id === 'reitoria-sel') return -1; if (b.id === 'reitoria-sel') return 1; // Reitoria primeiro
+        return String(a.nome).localeCompare(String(b.nome), 'pt-BR');
+      });
+    });
   }
 
   // ── Leitura do Firestore (navegador, SDK compat) ────────────────────────
@@ -312,6 +331,8 @@
   root.PainelFirestore = {
     construirProcessos: construirProcessos,
     carregarVisaoGeral: carregarVisaoGeral,
+    listarUnidades: listarUnidades,
+    unidadeAtual: _unidadeId,
     carregar: carregar
   };
 
