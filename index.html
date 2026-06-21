@@ -680,6 +680,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   /* Header compacto */
   .top-bar { height: auto; min-height: 50px; padding: 8px 12px; flex-wrap: nowrap; gap: 6px; }
   .brand-chip { display: none; }
+  #btn-visao-geral { display: none; }  /* no mobile vai p/ dentro do menu 🔗 */
   .brand-title { font-size: 12px; }
   .brand-inst  { font-size: 10px; }
   .brand-logo  { height: 32px; width: 32px; }
@@ -772,6 +773,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 </div>
 <!-- Menu flutuante de links para mobile pequeno -->
 <div class="mob-links-menu" id="mob-links-menu">
+  <a href="#" onclick="closeMobLinks();abrirVisaoGeral();return false;">⚙️ Visão Geral</a>
   <a href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/944690/" target="_blank" onclick="closeMobLinks()">📄 Portaria 638/2026</a>
   <a href="https://decofcp2-afk.github.io/proad-fluxos/" target="_blank" onclick="closeMobLinks()">🔗 Fluxos PROAD</a>
   <a href="https://portalespiral.cp2.g12.br/index.php/materialinstitucional/article/view/4903/2825" target="_blank" onclick="closeMobLinks()">📋 POP</a>
