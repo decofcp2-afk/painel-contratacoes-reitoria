@@ -742,6 +742,11 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 }
 </style>
 <script src="config.js"></script>
+<!-- Firebase (compat) — leitura direta do Firestore. A apiKey em config.js NAO e segredo;
+     a protecao e feita pelas regras do Firestore (leitura publica, escrita bloqueada). -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="painel-firestore.js"></script>
 </head>
 <body>
 
@@ -1173,11 +1178,30 @@ function chamarApiPainel_(route, params) {
  * botao "Atualizar". Busca dados no Apps Script por rota publica
  * somente leitura, compativel com GitHub Pages.
  */
+/*
+ * obterDadosPainel_()
+ * Fase 3: lê o Gantt direto do Firestore (rápido). Se o Firestore falhar
+ * ou não estiver configurado, cai automaticamente no Apps Script (compat).
+ */
+function obterDadosPainel_(forcarAtualizacao) {
+  var temFirestore = window.PainelFirestore
+    && window.PAINEL_CONFIG && window.PAINEL_CONFIG.firestoreAtivo
+    && window.PAINEL_CONFIG.firebase
+    && window.firebase;
+  if (temFirestore) {
+    return window.PainelFirestore.carregar().catch(function(err) {
+      if (window.console) console.warn('Firestore falhou; usando Apps Script.', err);
+      return chamarApiPainel_('painel.dados', { refresh: forcarAtualizacao ? '1' : '' });
+    });
+  }
+  return chamarApiPainel_('painel.dados', { refresh: forcarAtualizacao ? '1' : '' });
+}
+
 function carregarDados(forcarAtualizacao) {
-  showBanner('loading', 'Carregando dados da planilha...');
+  showBanner('loading', 'Carregando dados...');
   showSkeleton();
 
-  chamarApiPainel_('painel.dados', { refresh: forcarAtualizacao ? '1' : '' })
+  obterDadosPainel_(forcarAtualizacao)
     .then(function(result) {
       if (result.erro) {
         showBanner('error', 'Aviso: ' + result.erro);
