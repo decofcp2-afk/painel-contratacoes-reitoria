@@ -1234,8 +1234,26 @@ function carregarDados(forcarAtualizacao) {
  * carregarCapacidade()
  * Busca os dados de capacidade do setor via rota publica somente leitura.
  */
+function obterCapacidade_() {
+  // Preferir o cálculo POR UNIDADE direto do Firestore. A rota antiga do
+  // Apps Script lê uma única planilha (Reitoria) e exibiria o mesmo valor
+  // para todas as unidades. Só caímos no Apps Script se o Firestore falhar.
+  var temFirestore = window.PainelFirestore
+    && window.PainelFirestore.carregarCapacidade
+    && window.PAINEL_CONFIG && window.PAINEL_CONFIG.firestoreAtivo
+    && window.PAINEL_CONFIG.firebase
+    && window.firebase;
+  if (temFirestore) {
+    return window.PainelFirestore.carregarCapacidade().catch(function(err) {
+      if (window.console) console.warn('Capacidade via Firestore falhou; usando Apps Script.', err);
+      return chamarApiPainel_('painel.capacidade');
+    });
+  }
+  return chamarApiPainel_('painel.capacidade');
+}
+
 function carregarCapacidade() {
-  chamarApiPainel_('painel.capacidade')
+  obterCapacidade_()
     .then(function(cap) {
       if (!cap || !cap.ok) {
         document.getElementById('kv-cap').textContent    = 'N/D';
@@ -2507,8 +2525,49 @@ function renderMobileList(filtered) {
  *   Ordem: atrasados → andamento → planejamento → outros
  * Isso garante que os processos mais críticos apareçam no topo.
  */
+/*
+ * renderVazio()
+ * Estado vazio: quando a unidade selecionada não possui nenhum processo
+ * cadastrado, removemos o esqueleto (que ficaria animando para sempre) e
+ * exibimos uma mensagem clara em vez de simular um carregamento infinito.
+ */
+function renderVazio() {
+  var msg = 'Nenhum processo cadastrado para esta unidade.';
+  var sub = 'Quando processos forem cadastrados, eles aparecerão aqui automaticamente.';
+
+  // Limpa o cabeçalho de meses e o esqueleto dos dois painéis do Gantt
+  var hdrEl = document.getElementById('gantt-header'); if (hdrEl) hdrEl.innerHTML = '';
+  var namesEl = document.getElementById('gantt-names');
+  var barsEl  = document.getElementById('gantt-bars');
+  if (namesEl) {
+    namesEl.innerHTML =
+      '<div style="text-align:center;padding:48px 20px;color:var(--muted);font-size:14px;line-height:1.5">' +
+        '<div style="font-size:32px;margin-bottom:10px">🗂️</div>' +
+        '<div style="font-weight:600;color:var(--text,#1e293b)">' + msg + '</div>' +
+        '<div style="margin-top:6px;font-size:12.5px">' + sub + '</div>' +
+      '</div>';
+  }
+  if (barsEl) barsEl.innerHTML = '';
+
+  // Estado vazio também na lista mobile
+  var mob = document.getElementById('mobile-list');
+  if (mob) {
+    mob.innerHTML =
+      '<div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;line-height:1.5">' +
+        '<div style="font-size:32px;margin-bottom:10px">🗂️</div>' +
+        '<div style="font-weight:600;color:var(--text,#1e293b)">' + msg + '</div>' +
+        '<div style="margin-top:6px;font-size:12.5px">' + sub + '</div>' +
+      '</div>';
+  }
+
+  // Zera os KPIs de contagem
+  ['kv-tot','kv-and','kv-atra','kv-plan','kv-conc'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.textContent = '——';
+  });
+}
+
 function applyFilters() {
-  if (!DATA.length) return;
+  if (!DATA.length) { renderVazio(); return; }
   var q = document.getElementById('f-search').value.toLowerCase();
   var filtered = DATA.filter(function(p) {
     var matchQ = !q || (p.num + ' ' + p.nome).toLowerCase().indexOf(q) >= 0;

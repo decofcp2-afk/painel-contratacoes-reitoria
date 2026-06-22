@@ -328,12 +328,147 @@
     });
   }
 
+  // ── Capacidade do setor (POR UNIDADE) ───────────────────────────────────
+  // Antes a capacidade vinha de uma rota global do Apps Script, que lia uma
+  // única planilha (a da Reitoria). Resultado: TODAS as unidades exibiam o
+  // mesmo percentual — São Cristóvão I aparecia como 100% mesmo sem ninguém
+  // responsável pelos processos. Agora cada unidade calcula a própria
+  // capacidade a partir de suas coleções `cargas`/`servidores`/`etapas`,
+  // espelhando a FASE INTERNA do AppSEL (appsel-firestore.js).
+  function _capNormText(s) { return String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  function _capNum(v) { if (typeof v === 'number') return v; return parseFloat(String(v || '0').replace(',', '.')) || 0; }
+  function _capRound1(n) { return Math.round((n || 0) * 10) / 10; }
+  function _capNormStatus(s) {
+    if (!s) return 'pendente';
+    var n = _capNormText(s);
+    if (n.indexOf('conclu') >= 0) return 'ok';
+    if (n.indexOf('andament') >= 0) return 'andamento';
+    if (n.indexOf('atras') >= 0) return 'atrasado';
+    if (n.indexOf('aguard') === 0) return 'aguardando';
+    if (n.indexOf('parali') === 0 || n.indexOf('suspen') === 0) return 'paralisado';
+    if (n.indexOf('retornado') >= 0 && n.indexOf('fila') >= 0) return 'retornado';
+    if (n === 'nao se aplica' || n === 'n/a') return 'na';
+    return 'pendente';
+  }
+  function _capIsRetornoFilaMotivo(m) { return _capNormText(m).indexOf('retorno para fila:') === 0; }
+  function _capIsEtapaContratual(fase, nome) {
+    var f = _capNormText(fase), n = _capNormText(nome);
+    return f.indexOf('contrat') >= 0 || n.indexOf('assinatura contrato') >= 0 ||
+      n.indexOf('ata (arp)') >= 0 || n.indexOf('gestao contratual') >= 0;
+  }
+  // procConcluido + faseCorrente por processo (espelha _capFasesProc do AppSEL).
+  function _capFasesProc(etapasRaw) {
+    var acc = {};
+    (etapasRaw || []).forEach(function (e) {
+      var pid = String(e.processoId || '').trim();
+      if (!pid) return;
+      if (_capIsEtapaContratual(e.fase, e.etapa)) return;
+      var st = _capNormStatus(e.status);
+      if (st === 'na') return;
+      var kind = _capNormText(e.fase).indexOf('ext') >= 0 ? 'ext' : 'int';
+      if (!acc[pid]) acc[pid] = { total: 0, ok: 0, ativa: '', pend: '', pendPosOk: '' };
+      acc[pid].total++;
+      if (st === 'ok') acc[pid].ok++;
+      else if (['andamento', 'aguardando', 'paralisado', 'atrasado'].indexOf(st) >= 0 && !acc[pid].ativa) acc[pid].ativa = kind;
+      else if (st === 'pendente') {
+        if (!acc[pid].pend) acc[pid].pend = kind;
+        if (acc[pid].ok > 0 && !acc[pid].pendPosOk) acc[pid].pendPosOk = kind;
+      }
+    });
+    var concl = {}, fase = {};
+    Object.keys(acc).forEach(function (pid) {
+      concl[pid] = acc[pid].total > 0 && acc[pid].ok >= acc[pid].total;
+      if (!concl[pid]) fase[pid] = acc[pid].ativa || acc[pid].pendPosOk || acc[pid].pend || '';
+    });
+    return { concl: concl, fase: fase };
+  }
+  function _capRetornados(etapasRaw) {
+    var ret = {};
+    (etapasRaw || []).forEach(function (e) {
+      var pid = String(e.processoId || '').trim();
+      if (!pid) return;
+      if (_capNormStatus(e.status) === 'retornado' || _capIsRetornoFilaMotivo(e.motivoAtraso)) ret[pid] = true;
+    });
+    return ret;
+  }
+
+  // Agrega a FASE INTERNA da unidade:
+  //   totalPts = cargas internas ATIVAS (não concluídas, não retornadas)
+  //              + "outros fixos" de cada servidor
+  //   tetoPts  = nº de servidores × 10 (mesmo teto interno do AppSEL)
+  function _construirCapacidadeInterna(cargasRaw, etapasRaw, servidoresRaw) {
+    var TETO_INT = 10;
+    var servidores = servidoresRaw || [];
+    var fases = _capFasesProc(etapasRaw);
+    var retornados = _capRetornados(etapasRaw);
+
+    var processosPts = 0;
+    (cargasRaw || []).forEach(function (c) {
+      var serv = String(c.servidor || '').trim();
+      var pid = String(c.processoId || '').trim();
+      if (!serv || !pid) return;
+      if (c.ativo !== true) return;             // só carga ATIVA conta no total
+      if (fases.concl[pid]) return;             // processo concluído
+      if (retornados[pid]) return;              // devolvido à fila
+      var kind = _capNormText(c.fase).indexOf('ext') >= 0 ? 'ext' : 'int';
+      if (kind !== 'int') return;               // KPI público = fase interna
+      if (fases.fase[pid] === 'ext') return;    // processo já na fase externa
+      processosPts += _capRound1(_capNum(c.p1) + _capNum(c.p2) + _capNum(c.p3));
+    });
+
+    var outrosPts = 0;
+    servidores.forEach(function (s) { outrosPts += _capNum(s.outrosFixo); });
+
+    return {
+      totalPts: _capRound1(processosPts + outrosPts),
+      tetoPts: servidores.length * TETO_INT,
+      qtdServidores: servidores.length
+    };
+  }
+
+  function carregarCapacidade() {
+    var cfg = (root.PAINEL_CONFIG && root.PAINEL_CONFIG.firebase) || null;
+    if (!cfg || !root.firebase) return Promise.reject(new Error('Firebase nao configurado.'));
+    if (!root.firebase.apps || !root.firebase.apps.length) root.firebase.initializeApp(cfg);
+    var db = root.firebase.firestore();
+    var base = db.collection('unidades').doc(_unidadeId());
+    return Promise.all([
+      base.collection('cargas').get(),
+      base.collection('etapas').get(),
+      base.collection('servidores').get()
+    ]).then(function (s) {
+      var map = function (snap) { return snap.docs.map(function (d) { var o = d.data(); o._id = d.id; return o; }); };
+      var ag = _construirCapacidadeInterna(map(s[0]), map(s[1]), map(s[2]));
+      // Sem equipe cadastrada → não há teto: não faz sentido exibir percentual.
+      if (!ag.qtdServidores || ag.tetoPts <= 0) {
+        return { ok: false, erro: 'Sem equipe cadastrada nesta unidade' };
+      }
+      var pct = ag.totalPts / ag.tetoPts;
+      var nivel = pct >= 0.9 ? '🔴 Máxima' : pct >= 0.6 ? '🟡 Limitada' : '🟢 Disponível';
+      var mensagem = pct >= 0.9
+        ? 'Capacidade máxima — não encaminhar novos processos; aguardar orientação do SEL'
+        : pct >= 0.6
+        ? 'Capacidade limitada — encaminhar somente demandas prioritárias ou de baixa complexidade'
+        : 'Setor disponível — novos processos podem ser encaminhados regularmente';
+      return {
+        ok: true,
+        pct: Math.round(pct * 100 + 1e-9),
+        nivel: nivel,
+        mensagem: mensagem,
+        totalPts: ag.totalPts,
+        tetoPts: ag.tetoPts,
+        fase: 'interna'
+      };
+    });
+  }
+
   root.PainelFirestore = {
     construirProcessos: construirProcessos,
     carregarVisaoGeral: carregarVisaoGeral,
     listarUnidades: listarUnidades,
     unidadeAtual: _unidadeId,
-    carregar: carregar
+    carregar: carregar,
+    carregarCapacidade: carregarCapacidade
   };
 
   if (typeof module !== 'undefined' && module.exports) {
