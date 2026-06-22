@@ -126,6 +126,32 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .btn-refresh{background:rgba(255,255,255,.15);border:1px solid rgba(201,162,42,.4);color:var(--cpii-gold);font-family:var(--mono);font-size:12px;font-weight:700;padding:4px 10px;border-radius:10px;cursor:pointer;letter-spacing:1px;transition:all .2s}
 .btn-refresh:hover{background:rgba(201,162,42,.2);border-color:var(--cpii-gold)}
 .btn-refresh:disabled{opacity:.5;cursor:default}
+/* ── Seletor de unidade no cabeçalho (ocupa o lugar do antigo chip DECOF-LIC) ── */
+.unit-selector{background:rgba(201,162,42,.15);color:var(--cpii-navy);border:1px solid rgba(201,162,42,.45);font-family:var(--mono);font-size:13px;font-weight:700;padding:4px 10px;border-radius:3px;letter-spacing:.5px;margin-left:3px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:background .2s,border-color .2s;white-space:nowrap}
+.unit-selector:hover{background:rgba(201,162,42,.3);border-color:var(--cpii-gold)}
+/* ── Menu "Links Úteis" (canto superior direito) ── */
+.links-uteis-wrap{position:relative}
+.links-uteis-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:226px;background:#fff;border:1px solid rgba(11,29,51,.12);border-radius:10px;box-shadow:0 14px 40px rgba(8,18,33,.28);padding:6px;z-index:300;opacity:0;transform:translateY(-10px) scaleY(.95);transform-origin:top right;pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+.links-uteis-menu.open{opacity:1;transform:translateY(0) scaleY(1);pointer-events:auto}
+.links-uteis-menu a{display:flex;align-items:center;gap:9px;padding:10px 12px;font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--cpii-navy,#0b1d33);text-decoration:none;border-radius:7px;white-space:nowrap;opacity:0;transform:translateX(10px)}
+.links-uteis-menu a:hover{background:rgba(30,78,140,.08)}
+.links-uteis-menu.open a{animation:luItemIn .26s cubic-bezier(.22,1,.36,1) forwards}
+.links-uteis-menu.open a:nth-child(1){animation-delay:.03s}
+.links-uteis-menu.open a:nth-child(2){animation-delay:.07s}
+.links-uteis-menu.open a:nth-child(3){animation-delay:.11s}
+.links-uteis-menu.open a:nth-child(4){animation-delay:.15s}
+.links-uteis-menu.open a:nth-child(5){animation-delay:.19s}
+@keyframes luItemIn{to{opacity:1;transform:translateX(0)}}
+/* ── Modal de ajuda ── */
+.ajuda-backdrop{display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,18,33,.6);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:24px 16px;overflow:auto}
+.ajuda-backdrop.open{display:flex}
+.ajuda-modal{background:#fff;color:#1e293b;max-width:540px;width:100%;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden}
+.ajuda-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--cpii-navy,#0b1d33);color:#fff}
+.ajuda-body{padding:18px 22px;font-size:14px;line-height:1.55}
+.ajuda-body h4{margin:14px 0 4px;font-size:14px;color:var(--cpii-navy,#0b1d33)}
+.ajuda-body p{margin:6px 0}
+.ajuda-body ul{margin:6px 0;padding-left:20px}
+.ajuda-body li{margin:3px 0}
 
 /* ─────────────────────────────────────────────────────────────
    BANNER DE STATUS — faixa entre o header e os KPIs
@@ -680,7 +706,8 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   /* Header compacto */
   .top-bar { height: auto; min-height: 50px; padding: 8px 12px; flex-wrap: nowrap; gap: 6px; }
   .brand-chip { display: none; }
-  #btn-troca-unidade { display: none; }  /* no mobile vai p/ dentro do menu 🔗 */
+  /* o seletor de unidade (#btn-troca-unidade) agora fica na marca e deve aparecer no mobile */
+  .unit-selector { font-size: 11px; padding: 3px 7px; }
   .brand-title { font-size: 12px; }
   .brand-inst  { font-size: 10px; }
   .brand-logo  { height: 32px; width: 32px; }
@@ -760,24 +787,23 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
       <span class="brand-inst">Colégio Pedro II</span>
       <span class="brand-title">Painel de Contratações</span>
     </div>
-    <span class="brand-chip">DECOF-LIC</span>
+    <button class="unit-selector" id="btn-troca-unidade" onclick="abrirTrocaUnidade()" title="Trocar a unidade exibida">🏛️ Reitoria ▾</button>
   </div>
   <div class="top-right">
-    <button class="top-meta" id="btn-troca-unidade" onclick="abrirTrocaUnidade()" title="Trocar a unidade exibida" style="cursor:pointer">🏛️ Trocar unidade</button>
-    <a class="top-meta top-meta-link" href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/944690/" target="_blank" title="Abrir Portaria 638/2026 no SUAP">📄 Portaria 638/2026</a>
-    <a class="top-meta top-meta-link" href="https://decofcp2-afk.github.io/proad-fluxos/" target="_blank" title="Abrir fluxos internos da PROAD">🔗 Fluxos PROAD</a>
-    <a class="top-meta top-meta-link" href="https://portalespiral.cp2.g12.br/index.php/materialinstitucional/article/view/4903/2825" target="_blank" title="Manual POP — Procedimentos Operacionais Padrão">📋 POP</a>
-    <!-- Ícone flutuante de links — visível apenas no mobile pequeno (≤ 420px) -->
-    <button class="mob-links-btn" id="mob-links-btn" onclick="toggleMobLinks()" title="Links úteis">🔗</button>
+    <div class="links-uteis-wrap">
+      <button class="top-meta" id="links-uteis-btn" onclick="toggleLinksUteis(event)" aria-haspopup="true" aria-expanded="false" title="Links úteis">🔗 Links Úteis ▾</button>
+      <div class="links-uteis-menu" id="links-uteis-menu">
+        <a href="https://decofcp2-afk.github.io/app_gestao-reitoria/" target="_blank" rel="noopener" onclick="closeLinksUteis()">🔒 Acesso Restrito</a>
+        <a href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/944690/" target="_blank" rel="noopener" onclick="closeLinksUteis()">📄 Portaria 638/2026</a>
+        <a href="https://decofcp2-afk.github.io/proad-fluxos/" target="_blank" rel="noopener" onclick="closeLinksUteis()">🔗 Fluxos PROAD</a>
+        <a href="https://portalespiral.cp2.g12.br/index.php/materialinstitucional/article/view/4903/2825" target="_blank" rel="noopener" onclick="closeLinksUteis()">📋 POP</a>
+        <a href="#" onclick="closeLinksUteis();abrirAjuda();return false;">❓ Ajuda</a>
+      </div>
+    </div>
   </div>
 </div>
 <!-- Menu flutuante de links para mobile pequeno -->
-<div class="mob-links-menu" id="mob-links-menu">
-  <a href="#" onclick="closeMobLinks();abrirTrocaUnidade();return false;">🏛️ Trocar unidade</a>
-  <a href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/944690/" target="_blank" onclick="closeMobLinks()">📄 Portaria 638/2026</a>
-  <a href="https://decofcp2-afk.github.io/proad-fluxos/" target="_blank" onclick="closeMobLinks()">🔗 Fluxos PROAD</a>
-  <a href="https://portalespiral.cp2.g12.br/index.php/materialinstitucional/article/view/4903/2825" target="_blank" onclick="closeMobLinks()">📋 POP</a>
-</div>
+<!-- (menu mobile antigo removido — o menu "Links Úteis" do cabeçalho funciona em todas as larguras) -->
 
 <!--
   BANNER DE STATUS
@@ -930,24 +956,15 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 <div class="footer">
   <div class="footer-brand">
     <div class="footer-inst">
-      <span class="footer-name">Colégio Pedro II</span>
-      <span class="footer-addr">Campo de São Cristóvão, 177 · São Cristóvão — Rio de Janeiro / RJ</span>
+      <span class="footer-name" id="footer-name">Colégio Pedro II</span>
+      <span class="footer-addr" id="footer-addr">Campo de São Cristóvão, 177 · São Cristóvão — Rio de Janeiro / RJ</span>
     </div>
   </div>
   <div class="footer-divider"></div>
   <div class="footer-contact">
-    <div class="footer-ramais">
-      <span class="footer-ramais-lbl">Ramais — Licitações</span>
-      <div class="footer-ramais-nums">
-        <span class="footer-ramal">2163-5762</span>
-        <span class="footer-ramal">2163-5718</span>
-        <span class="footer-ramal">2163-5763</span>
-      </div>
-    </div>
-    <div class="footer-divider" style="margin:0 4px"></div>
     <div class="footer-email">
       <span class="footer-email-lbl">E-mail</span>
-      <span class="footer-email-val">✉&nbsp;central@cp2.g12.br</span>
+      <span class="footer-email-val" id="footer-email-val">✉&nbsp;central@cp2.g12.br</span>
     </div>
   </div>
   <div style="flex:1"></div>
@@ -2776,7 +2793,69 @@ carregarDados();
     </div>
   </div>
 </div>
+<!-- ───────── Modal de Ajuda ───────── -->
+<div id="ajuda-modal" class="ajuda-backdrop" onclick="if(event.target===this)fecharAjuda()">
+  <div class="ajuda-modal">
+    <div class="ajuda-hdr">
+      <strong style="font-size:15px;letter-spacing:.3px">❓ Como usar este painel</strong>
+      <button onclick="fecharAjuda()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div class="ajuda-body">
+      <p>Este é o <b>Painel de Contratações</b> — uma visão pública e somente leitura do andamento das licitações de cada unidade do Colégio Pedro II.</p>
+      <h4>🏛️ Unidade</h4>
+      <p>Use o seletor ao lado da marca (canto superior esquerdo) para escolher a unidade. O painel mostra os processos, o cronograma e a capacidade da unidade selecionada.</p>
+      <h4>📊 Indicadores (KPIs)</h4>
+      <ul>
+        <li><b>Total / Em andamento / Atrasados / Em fila / Concluídos</b> — contagem dos processos por situação.</li>
+        <li><b>Capacidade do setor</b> — quão ocupada está a equipe da unidade (🟢 disponível, 🟡 limitada, 🔴 máxima).</li>
+      </ul>
+      <h4>📅 Cronograma (Gantt)</h4>
+      <p>Cada linha é um processo e suas etapas. Os <b>prazos são contados em dias corridos</b> (incluindo fins de semana e feriados). A linha vertical marca o mês atual.</p>
+      <h4>🔗 Links Úteis</h4>
+      <p>No canto superior direito você encontra o acesso restrito (gestão), a portaria, os fluxos da PROAD e o POP.</p>
+      <p style="color:#64748b;font-size:12.5px;margin-top:14px">Os dados são atualizados automaticamente a partir do sistema de gestão das unidades.</p>
+    </div>
+  </div>
+</div>
 <script>
+function toggleLinksUteis(ev){
+  if (ev) ev.stopPropagation();
+  var menu = document.getElementById('links-uteis-menu');
+  var btn  = document.getElementById('links-uteis-btn');
+  if (!menu) return;
+  var aberto = menu.classList.toggle('open');
+  if (btn) btn.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+}
+function closeLinksUteis(){
+  var menu = document.getElementById('links-uteis-menu');
+  var btn  = document.getElementById('links-uteis-btn');
+  if (menu) menu.classList.remove('open');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+// Fecha o menu ao clicar fora dele
+document.addEventListener('click', function(e){
+  var wrap = document.querySelector('.links-uteis-wrap');
+  if (wrap && !wrap.contains(e.target)) closeLinksUteis();
+});
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ closeLinksUteis(); fecharAjuda(); } });
+
+function abrirAjuda(){ var m = document.getElementById('ajuda-modal'); if (m) m.classList.add('open'); }
+function fecharAjuda(){ var m = document.getElementById('ajuda-modal'); if (m) m.classList.remove('open'); }
+
+// Preenche o rodapé (endereço + e-mail) com os dados da unidade selecionada.
+function atualizarRodapeUnidade(){
+  if (!(window.PainelFirestore && window.PainelFirestore.carregarDadosUnidade)) return;
+  window.PainelFirestore.carregarDadosUnidade().then(function(d){
+    if (!d) return;
+    var addr = document.getElementById('footer-addr');
+    var mail = document.getElementById('footer-email-val');
+    if (addr && d.endereco) addr.textContent = d.endereco;
+    if (mail && d.emailInstitucional) mail.innerHTML = '✉&nbsp;' + d.emailInstitucional;
+  }).catch(function(){});
+}
+if (document.readyState !== 'loading') atualizarRodapeUnidade();
+else document.addEventListener('DOMContentLoaded', atualizarRodapeUnidade);
+
 function abrirTrocaUnidade(){
   var modal = document.getElementById('u-modal');
   var sel = document.getElementById('u-select');

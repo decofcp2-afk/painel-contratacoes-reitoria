@@ -267,6 +267,26 @@
     });
   }
 
+  // ── Dados cadastrais da unidade atual (rodapé do painel) ────────────────
+  // Lê o doc unidades/{id} e devolve nome/sigla/e-mail institucional/endereço.
+  // O e-mail e o endereço são editados no App Gestão (aba Configurações →
+  // "Dados da unidade") e refletidos aqui ao trocar de unidade.
+  function carregarDadosUnidade() {
+    var cfg = (root.PAINEL_CONFIG && root.PAINEL_CONFIG.firebase) || null;
+    if (!cfg || !root.firebase) return Promise.reject(new Error('Firebase nao configurado.'));
+    if (!root.firebase.apps || !root.firebase.apps.length) root.firebase.initializeApp(cfg);
+    return root.firebase.firestore().collection('unidades').doc(_unidadeId()).get().then(function (snap) {
+      var o = (snap && snap.exists) ? snap.data() : {};
+      return {
+        id: _unidadeId(),
+        nome: o.nome || '',
+        sigla: o.sigla || '',
+        emailInstitucional: o.emailInstitucional || '',
+        endereco: o.endereco || ''
+      };
+    });
+  }
+
   // ── Leitura do Firestore (navegador, SDK compat) ────────────────────────
   function carregar() {
     var cfg = (root.PAINEL_CONFIG && root.PAINEL_CONFIG.firebase) || null;
@@ -468,7 +488,8 @@
     listarUnidades: listarUnidades,
     unidadeAtual: _unidadeId,
     carregar: carregar,
-    carregarCapacidade: carregarCapacidade
+    carregarCapacidade: carregarCapacidade,
+    carregarDadosUnidade: carregarDadosUnidade
   };
 
   if (typeof module !== 'undefined' && module.exports) {
