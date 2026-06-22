@@ -142,6 +142,9 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .links-uteis-menu.open a:nth-child(4){animation-delay:.15s}
 .links-uteis-menu.open a:nth-child(5){animation-delay:.19s}
 @keyframes luItemIn{to{opacity:1;transform:translateX(0)}}
+/* No desktop a Ajuda fica como botão próprio ao lado de Links Úteis; no mobile
+   ela volta para dentro do menu (.ajuda-link-mob) para o cabeçalho não lotar. */
+.ajuda-link-mob{display:none}
 /* ── Modal de ajuda ── */
 .ajuda-backdrop{display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,18,33,.6);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:24px 16px;overflow:auto}
 .ajuda-backdrop.open{display:flex}
@@ -708,6 +711,9 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   .brand-chip { display: none; }
   /* o seletor de unidade (#btn-troca-unidade) agora fica na marca e deve aparecer no mobile */
   .unit-selector { font-size: 11px; padding: 3px 7px; }
+  /* no mobile a Ajuda volta para dentro do menu Links Úteis */
+  .ajuda-btn-desktop { display: none; }
+  .ajuda-link-mob { display: flex; }
   .brand-title { font-size: 12px; }
   .brand-inst  { font-size: 10px; }
   .brand-logo  { height: 32px; width: 32px; }
@@ -797,9 +803,10 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
         <a href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/944690/" target="_blank" rel="noopener" onclick="closeLinksUteis()">📄 Portaria 638/2026</a>
         <a href="https://decofcp2-afk.github.io/proad-fluxos/" target="_blank" rel="noopener" onclick="closeLinksUteis()">🔗 Fluxos PROAD</a>
         <a href="https://portalespiral.cp2.g12.br/index.php/materialinstitucional/article/view/4903/2825" target="_blank" rel="noopener" onclick="closeLinksUteis()">📋 POP</a>
-        <a href="#" onclick="closeLinksUteis();abrirAjuda();return false;">❓ Ajuda</a>
+        <a href="#" class="ajuda-link-mob" onclick="closeLinksUteis();abrirAjuda();return false;">❓ Ajuda</a>
       </div>
     </div>
+    <button class="top-meta ajuda-btn-desktop" onclick="abrirAjuda()" title="Como usar este painel">❓ Ajuda</button>
   </div>
 </div>
 <!-- Menu flutuante de links para mobile pequeno -->
