@@ -709,10 +709,11 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   /* Header compacto */
   .top-bar { height: auto; min-height: 50px; padding: 8px 12px; flex-wrap: nowrap; gap: 8px; }
   .brand-chip { display: none; }
-  /* a marca pode encolher (título trunca) para não espremer os Links Úteis */
-  .brand { min-width: 0; flex: 1 1 auto; }
+  /* a marca mostra o nome completo; o seletor de unidade quebra para a
+     linha de baixo quando não há largura suficiente */
+  .brand { min-width: 0; flex: 1 1 auto; flex-wrap: wrap; row-gap: 4px; }
   .brand-text { min-width: 0; }
-  .brand-title, .brand-inst { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand-title, .brand-inst { white-space: nowrap; }
   /* o bloco de Links Úteis nunca encolhe nem some no canto direito */
   .top-right { flex-shrink: 0; }
   /* no mobile o botão de Links Úteis mostra só o ícone 🔗 */
