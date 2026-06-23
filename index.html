@@ -721,7 +721,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
       "logo divider unit";
     align-items: center;
     column-gap: 9px;
-    row-gap: 6px;
+    row-gap: 3px;
     flex: 1 1 auto;
     min-width: 0;
   }
@@ -730,7 +730,9 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   .brand-text    { grid-area: title; min-width: 0; }
   .brand-inst    { display: none; }
   .brand-title   { white-space: nowrap; }
-  .unit-selector { grid-area: unit; justify-self: start; }
+  /* desloca o seletor à esquerda pela borda+padding (1+8px) para que o
+     conteúdo dele alinhe com o texto do título, e não a borda da caixa */
+  .unit-selector { grid-area: unit; justify-self: start; margin-left: -9px; }
   /* o bloco de Links Úteis nunca encolhe nem some no canto direito */
   .top-right { flex-shrink: 0; }
   /* no mobile o botão de Links Úteis mostra só o ícone 🔗 */
