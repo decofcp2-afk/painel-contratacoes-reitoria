@@ -849,6 +849,8 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="painel-firestore.js"></script>
+<!-- Fase 1 do PLANO_SEGURANCA.md — camada de acesso a dados (gateway de leitura). -->
+<script src="data-gateway.js"></script>
 </head>
 <body>
 
@@ -1158,114 +1160,12 @@ function hideSkeleton() {
   // O render() já substitui o conteúdo do gantt-table, nada a fazer
 }
 
-function getApiConfig_() {
-  var cfg = window.PAINEL_CONFIG || {};
-  var apiUrl = String(cfg.apiUrl || '').trim();
-  if (!apiUrl) {
-    throw new Error('Configure a URL do Apps Script no arquivo config.js.');
-  }
-  return { apiUrl: apiUrl };
-}
-
-function montarUrlApiPainel_(apiUrl, route, params, callbackName) {
-  var query = [
-    'route=' + encodeURIComponent(route),
-    '_=' + Date.now()
-  ];
-
-  if (callbackName) {
-    query.splice(1, 0, 'callback=' + encodeURIComponent(callbackName));
-  }
-
-  Object.keys(params || {}).forEach(function(key) {
-    var val = params[key];
-    if (val !== undefined && val !== null && val !== '') {
-      query.push(encodeURIComponent(key) + '=' + encodeURIComponent(String(val)));
-    }
-  });
-
-  var sep = apiUrl.indexOf('?') >= 0 ? '&' : '?';
-  return apiUrl + sep + query.join('&');
-}
-
-function chamarApiPainelJsonp_(route, params) {
-  return new Promise(function(resolve, reject) {
-    var cfg;
-    try {
-      cfg = getApiConfig_();
-    } catch(e) {
-      reject(e);
-      return;
-    }
-
-    var callbackName = '__painelCallback_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-    var script = document.createElement('script');
-    var timer;
-
-    function cleanup() {
-      clearTimeout(timer);
-      try { delete window[callbackName]; } catch(e) { window[callbackName] = undefined; }
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    window[callbackName] = function(payload) {
-      cleanup();
-      resolve(payload || {});
-    };
-
-    script.onerror = function() {
-      cleanup();
-      reject(new Error('Nao foi possivel carregar os dados do Apps Script.'));
-    };
-
-    timer = setTimeout(function() {
-      cleanup();
-      reject(new Error('Tempo esgotado ao consultar o Apps Script.'));
-    }, 30000);
-
-    script.src = montarUrlApiPainel_(cfg.apiUrl, route, params, callbackName);
-    document.head.appendChild(script);
-  });
-}
-
-function chamarApiPainel_(route, params) {
-  var cfg;
-  try {
-    cfg = getApiConfig_();
-  } catch(e) {
-    return Promise.reject(e);
-  }
-
-  if (!window.fetch) {
-    return chamarApiPainelJsonp_(route, params);
-  }
-
-  return fetch(montarUrlApiPainel_(cfg.apiUrl, route, params), {
-    method: 'GET',
-    cache: 'no-store',
-    credentials: 'omit',
-    redirect: 'follow'
-  })
-    .then(function(resp) {
-      if (!resp.ok) {
-        throw new Error('Apps Script respondeu HTTP ' + resp.status + '.');
-      }
-      return resp.text();
-    })
-    .then(function(txt) {
-      try {
-        return JSON.parse(txt);
-      } catch(e) {
-        throw new Error('A resposta do Apps Script nao veio em JSON valido.');
-      }
-    })
-    .catch(function(err) {
-      if (window.console && console.warn) {
-        console.warn('Fetch do Apps Script falhou; usando JSONP.', err);
-      }
-      return chamarApiPainelJsonp_(route, params);
-    });
-}
+/*
+ * Camada de Acesso a Dados (transporte ao Apps Script + leitura Firestore-first)
+ * foi extraída para data-gateway.js — Fase 1 do PLANO_SEGURANCA.md.
+ * Funções disponíveis globalmente: obterDadosPainel_() e obterCapacidade_(),
+ * além de PainelGateway.lerDados()/lerCapacidade().
+ */
 
 /*
  * carregarDados()
@@ -1273,25 +1173,6 @@ function chamarApiPainel_(route, params) {
  * botao "Atualizar". Busca dados no Apps Script por rota publica
  * somente leitura, compativel com GitHub Pages.
  */
-/*
- * obterDadosPainel_()
- * Fase 3: lê o Gantt direto do Firestore (rápido). Se o Firestore falhar
- * ou não estiver configurado, cai automaticamente no Apps Script (compat).
- */
-function obterDadosPainel_(forcarAtualizacao) {
-  var temFirestore = window.PainelFirestore
-    && window.PAINEL_CONFIG && window.PAINEL_CONFIG.firestoreAtivo
-    && window.PAINEL_CONFIG.firebase
-    && window.firebase;
-  if (temFirestore) {
-    return window.PainelFirestore.carregar().catch(function(err) {
-      if (window.console) console.warn('Firestore falhou; usando Apps Script.', err);
-      return chamarApiPainel_('painel.dados', { refresh: forcarAtualizacao ? '1' : '' });
-    });
-  }
-  return chamarApiPainel_('painel.dados', { refresh: forcarAtualizacao ? '1' : '' });
-}
-
 function carregarDados(forcarAtualizacao) {
   showBanner('loading', 'Carregando dados...');
   showSkeleton();
@@ -1326,23 +1207,7 @@ function carregarDados(forcarAtualizacao) {
  * carregarCapacidade()
  * Busca os dados de capacidade do setor via rota publica somente leitura.
  */
-function obterCapacidade_() {
-  // Preferir o cálculo POR UNIDADE direto do Firestore. A rota antiga do
-  // Apps Script lê uma única planilha (Reitoria) e exibiria o mesmo valor
-  // para todas as unidades. Só caímos no Apps Script se o Firestore falhar.
-  var temFirestore = window.PainelFirestore
-    && window.PainelFirestore.carregarCapacidade
-    && window.PAINEL_CONFIG && window.PAINEL_CONFIG.firestoreAtivo
-    && window.PAINEL_CONFIG.firebase
-    && window.firebase;
-  if (temFirestore) {
-    return window.PainelFirestore.carregarCapacidade().catch(function(err) {
-      if (window.console) console.warn('Capacidade via Firestore falhou; usando Apps Script.', err);
-      return chamarApiPainel_('painel.capacidade');
-    });
-  }
-  return chamarApiPainel_('painel.capacidade');
-}
+/* obterCapacidade_() foi movida para data-gateway.js (Fase 1). */
 
 function carregarCapacidade() {
   obterCapacidade_()
