@@ -46,11 +46,22 @@ fronteiras claras, substituindo as chamadas dispersas.
 - [ ] Inventariar todas as chamadas: cada `fetch()`, cada leitura Firestore, cada `innerHTML`.
 
 ### Fase 1 — Camada de Acesso a Dados (`data-gateway.js`)
-Único módulo autorizado a falar com o backend:
-- [ ] `api.read(route, params)` — encapsula Firestore + Apps Script (decisão interna, como o atual `firestoreAtivo`).
-- [ ] `api.write(route, params)` — sempre via Apps Script com token.
-- [ ] Centraliza timeout, retry com backoff, tratamento de erro padronizado e **anexa o token de sessão automaticamente**.
-- [ ] Refatorar telas para chamarem **apenas** o gateway (nada de `fetch`/`firebase` direto).
+Único módulo autorizado a falar com o backend.
+
+**Estado em 2026-06-23:** o painel é um **dashboard somente leitura** (sem
+escrita e sem login/token), então a Fase 1 aqui é mais simples que no
+`app_gestao-reitoria`. A leitura já está concentrada **inline** no `index.html`
+(`chamarApiPainel_`/`chamarApiPainelJsonp_`/`montarUrlApiPainel_`, ~linhas
+1160–1268) e isolada em `painel-firestore.js` (`PainelFirestore.carregar*`). O
+despacho Firestore-first com fallback ao Apps Script vive em
+`obterDadosPainel_()`. Falta apenas **extrair** para módulo próprio.
+
+- [x] `api.read(route, params)` — leitura encapsulada em `PainelFirestore` (Firestore) com fallback ao Apps Script via `chamarApiPainel_`; despacho em `obterDadosPainel_()`.
+- [N/A] `api.write` / **token automático** — não se aplica: o painel não escreve nem autentica (rota pública somente leitura).
+- [x] Centraliza timeout (30 s) e tratamento de erro com fallback JSONP em `chamarApiPainel_`.
+- [~] Telas já leem **apenas** via `obterDadosPainel_`/`PainelFirestore`, mas o gateway ainda **não é módulo separado** — continua embutido no `index.html`. **Pendente:** extrair para `data-gateway.js`.
+
+**Próximo passo:** como o painel é somente leitura (sem token/escrita), a Fase 1 aqui se resume a **extrair** `chamarApiPainel_`/`montarUrlApiPainel_`/`obterDadosPainel_` para um `data-gateway.js` próprio. Sem o trabalho de padronização de token que o `app_gestao-reitoria` exige.
 
 ### Fase 2 — Camada de Autenticação/Sessão (`auth.js` + endurecimento no `Code.gs`)
 - [ ] Cliente: guardião de sessão (armazenamento, expiração, renovação, logout automático em 401).
