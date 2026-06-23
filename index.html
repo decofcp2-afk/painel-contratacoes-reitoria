@@ -121,7 +121,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .brand-title{font-size:14px;font-weight:600;color:var(--text2);letter-spacing:.3px;line-height:1.2}
 .brand-chip{background:rgba(201,162,42,.15);color:var(--cpii-gold);border:1px solid rgba(201,162,42,.35);font-family:var(--mono);font-size:13px;font-weight:700;padding:4px 10px;border-radius:3px;letter-spacing:1.5px;margin-left:3px}
 .top-right{display:flex;align-items:center;gap:8px}
-.top-meta{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--cpii-navy);background:rgba(201,162,42,.15);border:1px solid rgba(201,162,42,.35);padding:2px 7px;border-radius:3px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:background .2s,border-color .2s}
+.top-meta{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--cpii-navy);background:rgba(201,162,42,.15);border:1px solid rgba(201,162,42,.35);padding:2px 7px;border-radius:3px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;transition:background .2s,border-color .2s}
 .top-meta:hover{background:rgba(201,162,42,.3);border-color:var(--cpii-gold)}
 .btn-refresh{background:rgba(255,255,255,.15);border:1px solid rgba(201,162,42,.4);color:var(--cpii-gold);font-family:var(--mono);font-size:12px;font-weight:700;padding:4px 10px;border-radius:10px;cursor:pointer;letter-spacing:1px;transition:all .2s}
 .btn-refresh:hover{background:rgba(201,162,42,.2);border-color:var(--cpii-gold)}
@@ -707,10 +707,19 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   .mob-modal-filter { display: flex !important; } /* filtro de modalidade mobile */
 
   /* Header compacto */
-  .top-bar { height: auto; min-height: 50px; padding: 8px 12px; flex-wrap: nowrap; gap: 6px; }
+  .top-bar { height: auto; min-height: 50px; padding: 8px 12px; flex-wrap: nowrap; gap: 8px; }
   .brand-chip { display: none; }
+  /* a marca pode encolher (título trunca) para não espremer os Links Úteis */
+  .brand { min-width: 0; flex: 1 1 auto; }
+  .brand-text { min-width: 0; }
+  .brand-title, .brand-inst { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* o bloco de Links Úteis nunca encolhe nem some no canto direito */
+  .top-right { flex-shrink: 0; }
+  /* no mobile o botão de Links Úteis mostra só o ícone 🔗 */
+  #links-uteis-btn .lu-label { display: none; }
+  #links-uteis-btn { font-size: 16px; padding: 6px 9px; line-height: 1; }
   /* o seletor de unidade (#btn-troca-unidade) agora fica na marca e deve aparecer no mobile */
-  .unit-selector { font-size: 11px; padding: 3px 7px; }
+  .unit-selector { font-size: 11px; padding: 3px 7px; flex-shrink: 0; }
   /* no mobile a Ajuda volta para dentro do menu Links Úteis */
   .ajuda-btn-desktop { display: none; }
   .ajuda-link-mob { display: flex; }
@@ -797,7 +806,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   </div>
   <div class="top-right">
     <div class="links-uteis-wrap">
-      <button class="top-meta" id="links-uteis-btn" onclick="toggleLinksUteis(event)" aria-haspopup="true" aria-expanded="false" title="Links úteis">🔗 Links Úteis ▾</button>
+      <button class="top-meta" id="links-uteis-btn" onclick="toggleLinksUteis(event)" aria-haspopup="true" aria-expanded="false" title="Links úteis" aria-label="Links úteis">🔗<span class="lu-label"> Links Úteis ▾</span></button>
       <div class="links-uteis-menu" id="links-uteis-menu">
         <a href="https://decofcp2-afk.github.io/app_gestao-reitoria/" target="_blank" rel="noopener" onclick="closeLinksUteis()">🔒 Acesso Restrito</a>
         <a href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/944690/" target="_blank" rel="noopener" onclick="closeLinksUteis()">📄 Portaria 638/2026</a>
