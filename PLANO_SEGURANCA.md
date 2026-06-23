@@ -59,9 +59,9 @@ despacho Firestore-first com fallback ao Apps Script vive em
 - [x] `api.read(route, params)` — leitura encapsulada em `PainelFirestore` (Firestore) com fallback ao Apps Script via `chamarApiPainel_`; despacho em `obterDadosPainel_()`.
 - [N/A] `api.write` / **token automático** — não se aplica: o painel não escreve nem autentica (rota pública somente leitura).
 - [x] Centraliza timeout (30 s) e tratamento de erro com fallback JSONP em `chamarApiPainel_`.
-- [~] Telas já leem **apenas** via `obterDadosPainel_`/`PainelFirestore`, mas o gateway ainda **não é módulo separado** — continua embutido no `index.html`. **Pendente:** extrair para `data-gateway.js`.
+- [x] Gateway **extraído** para `data-gateway.js` (2026-06-23): transporte (`chamarApiPainel_`/`montarUrlApiPainel_`/`chamarApiPainelJsonp_`) + despacho de leitura Firestore-first (`obterDadosPainel_`/`obterCapacidade_`). Expõe `PainelGateway.lerDados`/`lerCapacidade`; aliases globais mantidos por compat. **Verificado no navegador** (carrega 13 processos + capacidade, sem erros).
 
-**Próximo passo:** como o painel é somente leitura (sem token/escrita), a Fase 1 aqui se resume a **extrair** `chamarApiPainel_`/`montarUrlApiPainel_`/`obterDadosPainel_` para um `data-gateway.js` próprio. Sem o trabalho de padronização de token que o `app_gestao-reitoria` exige.
+**Fase 1 concluída para o painel** — por ser somente leitura, não há `api.write`/token a padronizar. Próxima: Fase 3 (sanitização/anti-XSS, ~28 `innerHTML`).
 
 ### Fase 2 — Camada de Autenticação/Sessão (`auth.js` + endurecimento no `Code.gs`)
 - [ ] Cliente: guardião de sessão (armazenamento, expiração, renovação, logout automático em 401).
