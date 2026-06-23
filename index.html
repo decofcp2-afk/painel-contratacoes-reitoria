@@ -759,6 +759,10 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   /* KPIs: 3 colunas × 2 linhas */
   .kpi-strip { grid-template-columns: repeat(3, 1fr); padding: 8px 12px; gap: 8px; }
   .kpi { padding: 6px 10px; }
+  /* Card de Capacidade desce para uma linha própria, abaixo de Fila/Concluídos,
+     centralizado na tela com a largura de dois cards (evita ficar esticado e o
+     vão vazio que sobrava ao lado dos cards baixos). */
+  .kpi.cap { grid-column: 1 / -1; justify-self: center; width: calc((100% - 16px) * 2 / 3 + 8px); }
   .kpi-val { font-size: 20px; }
   .kpi-lbl { font-size: 10px; }
   .kpi-sub { display: none; }
