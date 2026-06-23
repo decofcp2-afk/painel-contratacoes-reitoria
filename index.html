@@ -737,7 +737,14 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   .top-right { flex-shrink: 0; }
   /* no mobile o botão de Links Úteis mostra só o ícone 🔗 */
   #links-uteis-btn .lu-label { display: none; }
-  #links-uteis-btn { font-size: 16px; padding: 6px 9px; line-height: 1; }
+  #links-uteis-btn {
+    font-size: 16px; line-height: 1; padding: 0;
+    width: 36px; height: 36px; justify-content: center;
+    border-radius: 50%;
+    background: rgba(201,162,42,.35);
+    border-color: rgba(201,162,42,.55);
+  }
+  #links-uteis-btn:hover { background: rgba(201,162,42,.5); }
   /* o seletor de unidade (#btn-troca-unidade) agora fica na marca e deve aparecer no mobile */
   .unit-selector { font-size: 10px; padding: 2px 8px; letter-spacing: .3px; }
   /* no mobile a Ajuda volta para dentro do menu Links Úteis */
