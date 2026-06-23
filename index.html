@@ -761,8 +761,11 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
      cada, mais largos), linha 3 = Capacidade ocupando a largura total. */
   .kpi-strip { grid-template-columns: repeat(6, 1fr); padding: 8px 12px; gap: 8px; }
   .kpi { padding: 6px 10px; grid-column: span 2; }
-  .kpi.plan, .kpi.conc { grid-column: span 3; }
-  .kpi.cap { grid-column: 1 / -1; }
+  /* Linhas 2 e 3 um pouco mais estreitas que a linha 1, com leve respiro nas
+     laterais; o recuo igual mantém Fila/Concluídos alinhados com a Capacidade. */
+  .kpi.plan { grid-column: span 3; margin-left: 16px; }
+  .kpi.conc { grid-column: span 3; margin-right: 16px; }
+  .kpi.cap  { grid-column: 1 / -1; margin-left: 16px; margin-right: 16px; }
   .kpi-val { font-size: 20px; }
   .kpi-lbl { font-size: 10px; }
   .kpi-sub { display: none; }
