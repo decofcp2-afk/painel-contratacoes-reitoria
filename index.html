@@ -756,13 +756,13 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   .top-meta    { font-size: 11px; padding: 2px 6px; }
   .btn-refresh { font-size: 11px; padding: 4px 8px; }
 
-  /* KPIs: 3 colunas × 2 linhas */
-  .kpi-strip { grid-template-columns: repeat(3, 1fr); padding: 8px 12px; gap: 8px; }
-  .kpi { padding: 6px 10px; }
-  /* Card de Capacidade desce para uma linha própria, abaixo de Fila/Concluídos,
-     centralizado na tela com a largura de dois cards (evita ficar esticado e o
-     vão vazio que sobrava ao lado dos cards baixos). */
-  .kpi.cap { grid-column: 1 / -1; justify-self: center; width: calc((100% - 16px) * 2 / 3 + 8px); }
+  /* KPIs em grade de 6 colunas para linhas equilibradas e sem vãos:
+     linha 1 = 3 cards (2 colunas cada), linha 2 = Fila + Concluídos (3 colunas
+     cada, mais largos), linha 3 = Capacidade ocupando a largura total. */
+  .kpi-strip { grid-template-columns: repeat(6, 1fr); padding: 8px 12px; gap: 8px; }
+  .kpi { padding: 6px 10px; grid-column: span 2; }
+  .kpi.plan, .kpi.conc { grid-column: span 3; }
+  .kpi.cap { grid-column: 1 / -1; }
   .kpi-val { font-size: 20px; }
   .kpi-lbl { font-size: 10px; }
   .kpi-sub { display: none; }
