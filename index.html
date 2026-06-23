@@ -715,6 +715,9 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   .brand-title, .brand-inst { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* o bloco de Links Úteis nunca encolhe nem some no canto direito */
   .top-right { flex-shrink: 0; }
+  /* no mobile o botão de Links Úteis mostra só o ícone 🔗 */
+  #links-uteis-btn .lu-label { display: none; }
+  #links-uteis-btn { font-size: 16px; padding: 6px 9px; line-height: 1; }
   /* o seletor de unidade (#btn-troca-unidade) agora fica na marca e deve aparecer no mobile */
   .unit-selector { font-size: 11px; padding: 3px 7px; flex-shrink: 0; }
   /* no mobile a Ajuda volta para dentro do menu Links Úteis */
@@ -803,7 +806,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   </div>
   <div class="top-right">
     <div class="links-uteis-wrap">
-      <button class="top-meta" id="links-uteis-btn" onclick="toggleLinksUteis(event)" aria-haspopup="true" aria-expanded="false" title="Links úteis">🔗 Links Úteis ▾</button>
+      <button class="top-meta" id="links-uteis-btn" onclick="toggleLinksUteis(event)" aria-haspopup="true" aria-expanded="false" title="Links úteis" aria-label="Links úteis">🔗<span class="lu-label"> Links Úteis ▾</span></button>
       <div class="links-uteis-menu" id="links-uteis-menu">
         <a href="https://decofcp2-afk.github.io/app_gestao-reitoria/" target="_blank" rel="noopener" onclick="closeLinksUteis()">🔒 Acesso Restrito</a>
         <a href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/944690/" target="_blank" rel="noopener" onclick="closeLinksUteis()">📄 Portaria 638/2026</a>
