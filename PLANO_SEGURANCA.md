@@ -39,9 +39,10 @@ fronteiras claras, substituindo as chamadas dispersas.
 ## 3. Fases
 
 ### Fase 0 — Fundação e baseline (sem mudar comportamento)
+- [x] **CSP** via `<meta http-equiv="Content-Security-Policy">` no `index.html`. (Report-only **não** é suportado por `<meta>` e o site é estático no GitHub Pages, então a CSP é enforcing e permissiva — `'unsafe-inline'` para script/style — para não quebrar. **Verificar em navegador** antes de tirar o PR de draft.)
+- [x] Meta `referrer` = `strict-origin-when-cross-origin`.
+- [ ] **SRI** (`integrity` + `crossorigin`) nos scripts externos (`firebase-app-compat`, `firebase-firestore-compat`). **Bloqueado neste ambiente**: o egress nega `www.gstatic.com`, impedindo o cálculo do hash `sha384`. Calcular num ambiente com acesso e fixar a versão.
 - [ ] Criar pasta `src/` (ou `js/`) para iniciar a quebra do `index.html`.
-- [ ] Adicionar **CSP** via `<meta http-equiv="Content-Security-Policy-Report-Only">` para mapear violações sem quebrar.
-- [ ] Adicionar **SRI** (`integrity` + `crossorigin`) ao script do `gstatic` (`firebase-firestore-compat.js`).
 - [ ] Inventariar todas as chamadas: cada `fetch()`, cada leitura Firestore, cada `innerHTML`.
 
 ### Fase 1 — Camada de Acesso a Dados (`data-gateway.js`)
