@@ -124,6 +124,11 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:var(--s1)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+/* ── Acessibilidade: foco de teclado visível + respeito a movimento reduzido ── */
+:focus-visible{outline:2px solid var(--accent2);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
 
 /* ─────────────────────────────────────────────────────────────
    HEADER — barra superior fixa com logo, título e botão Atualizar
@@ -255,7 +260,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .fg{display:flex;flex-direction:column;gap:4px}
 .fl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.9px;color:var(--muted)}
 .fi{background:var(--s2);border:1px solid var(--border);color:var(--text2);font-family:var(--sans);font-size:13px;padding:7px 12px;border-radius:10px;transition:border-color .15s;min-width:260px}
-.fi:focus{outline:none;border-color:var(--accent)}
+.fi:focus:not(:focus-visible){outline:none;border-color:var(--accent)}
 .fi::placeholder{color:var(--muted)}
 .status-filter-group{display:flex;gap:5px;align-items:flex-end}
 .status-btn{background:var(--s2);border:1px solid var(--border);color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;padding:7px 13px;border-radius:10px;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.5px}
@@ -272,7 +277,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .escala-btn.active-escala{border-color:var(--accent2);color:var(--accent2);background:rgba(77,166,255,.06)}
 /* SELECT de filtro por ano */
 .ano-select{background:var(--s2);border:1px solid var(--border);color:var(--text2);font-family:var(--sans);font-size:12px;font-weight:600;padding:7px 28px 7px 12px;border-radius:10px;cursor:pointer;transition:border-color .15s;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b82a0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
-.ano-select:focus{outline:none;border-color:var(--accent2)}
+.ano-select:focus:not(:focus-visible){outline:none;border-color:var(--accent2)}
 /* No modo Trimestre: só colunas-chave (Jan/Abr/Jul/Out) têm borda — as demais somem */
 .gh-mo.trim-vazio{border-right:none;color:transparent}
 
