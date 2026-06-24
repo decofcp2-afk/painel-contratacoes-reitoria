@@ -70,9 +70,18 @@ despacho Firestore-first com fallback ao Apps Script vive em
 - [ ] Verificar que nenhuma rota sensível responde sem token válido.
 
 ### Fase 3 — Camada de Sanitização/Renderização (anti-XSS)
-- [ ] Helpers `dom.text(el, valor)` e `dom.html(el, fragmentoConfiável)` substituindo os `innerHTML`.
-- [ ] Regra: dado vindo do backend nunca entra via `innerHTML` cru — sempre `textContent` ou template escapado.
-- [ ] Migrar handlers `inline` (`onclick=`) para `addEventListener` e ativar a **CSP em modo enforce**.
+**Estado em 2026-06-24:** auditoria dos ~28 `innerHTML` concluída. A grande maioria
+já era segura: usa o helper `esc()` (escaper HTML completo — `&<>"'`, def. ~L1070)
+nos dados do backend, ou injeta apenas markup/SVG estático e constantes. Foram
+encontrados e corrigidos **2 pontos** que injetavam dado do backend cru:
+- [x] `atualizarRodapeUnidade` (~L2793): `emailInstitucional` → agora `esc(d.emailInstitucional)`.
+- [x] `abrirTrocaUnidade` (~L2810): `u.id`/`u.nome` no `<option>` → agora `esc(u.id)`/`esc(u.nome||u.id)`.
+- [x] Regra geral atendida: nenhum dado do backend entra mais via `innerHTML` cru.
+- [ ] (Opcional/futuro) Extrair helpers `dom.text`/`dom.html` formais substituindo `esc()` + `innerHTML`.
+- [x] **Migrados os ~22 handlers inline (`onclick=`/`oninput=`/`onchange=`) para `addEventListener`** (fiação `wireEvents()` no fim do `painel-ui.js`, via id/classe/`data-*`). Zero handlers inline restantes (verificado: `[onclick],[oninput],[onchange]` = 0).
+- [x] **Os 2 blocos `<script>` inline foram externalizados** para `painel-core.js` (~73 KB, lógica/render) e `painel-ui.js` (~6 KB, modais/handlers), carregados após `data-gateway.js` na mesma ordem.
+- [x] **CSP `script-src` SEM `'unsafe-inline'`** (enforce) — só `'self'` + gstatic/script.google(usercontent). `style-src` mantém `'unsafe-inline'` (estilos dinâmicos do Gantt; risco baixo). **Verificado no preview**: 13 processos carregam, filtro de status e modal de unidades funcionam, sem violações de CSP no console.
+- [ ] (Futuro, baixa prioridade) Endurecer `style-src` exigiria refatorar ~46 estilos inline (inclusive larguras dinâmicas) — ganho marginal, deixado fora.
 
 ### Fase 4 — Camada de Validação de Entrada (`validators.js`)
 - [ ] Regras de validação compartilhadas (datas, status, identificadores, etc.).
