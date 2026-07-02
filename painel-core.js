@@ -134,7 +134,7 @@ function carregarDados(forcarAtualizacao) {
       applyFilters();
     })
     .catch(function(err) {
-      showBanner('error', 'Erro ao comunicar com o Apps Script: ' + (err.message || err));
+      showBanner('error', 'Não foi possível carregar os dados agora: ' + (err.message || err) + ' — tente Atualizar em instantes.');
     });
 
   carregarCapacidade();
