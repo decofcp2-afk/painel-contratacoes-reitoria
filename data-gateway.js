@@ -127,35 +127,33 @@
       });
   }
 
-  // ── Leitura (público): Firestore-first com fallback ao Apps Script ───────
+  // ── Leitura (público): Firestore, SEM fallback ao Apps Script ───────────
+  // Pós-corte da migração, a rota antiga do Apps Script lê a PLANILHA da
+  // Reitoria, congelada na migração: cair para ela mostrava dados antigos (e,
+  // para as demais unidades, dados da unidade errada) sem nenhum aviso. Em
+  // falha do Firestore, o erro é propagado para a UI tratar. As rotas do Apps
+  // Script permanecem apenas para o modo firestoreAtivo=false (legado).
   function obterDadosPainel_(forcarAtualizacao) {
     var temFirestore = root.PainelFirestore
       && root.PAINEL_CONFIG && root.PAINEL_CONFIG.firestoreAtivo
       && root.PAINEL_CONFIG.firebase
       && root.firebase;
     if (temFirestore) {
-      return root.PainelFirestore.carregar().catch(function(err) {
-        if (root.console) console.warn('Firestore falhou; usando Apps Script.', err);
-        return chamarApiPainel_('painel.dados', { refresh: forcarAtualizacao ? '1' : '' });
-      });
+      return root.PainelFirestore.carregar();
     }
     return chamarApiPainel_('painel.dados', { refresh: forcarAtualizacao ? '1' : '' });
   }
 
   function obterCapacidade_() {
-    // Preferir o cálculo POR UNIDADE direto do Firestore. A rota antiga do
-    // Apps Script lê uma única planilha (Reitoria) e exibiria o mesmo valor
-    // para todas as unidades. Só caímos no Apps Script se o Firestore falhar.
+    // Cálculo POR UNIDADE direto do Firestore (a rota antiga do Apps Script
+    // exibiria o valor da Reitoria para todas as unidades).
     var temFirestore = root.PainelFirestore
       && root.PainelFirestore.carregarCapacidade
       && root.PAINEL_CONFIG && root.PAINEL_CONFIG.firestoreAtivo
       && root.PAINEL_CONFIG.firebase
       && root.firebase;
     if (temFirestore) {
-      return root.PainelFirestore.carregarCapacidade().catch(function(err) {
-        if (root.console) console.warn('Capacidade via Firestore falhou; usando Apps Script.', err);
-        return chamarApiPainel_('painel.capacidade');
-      });
+      return root.PainelFirestore.carregarCapacidade();
     }
     return chamarApiPainel_('painel.capacidade');
   }
