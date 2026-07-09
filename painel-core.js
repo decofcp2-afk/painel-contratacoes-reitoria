@@ -294,6 +294,10 @@ function periodoRealizadoEtapa_(et) {
   if (et.status === 'ok' && et.dias > 0 && et.fim_iso) {
     return { label: 'Período realizado', texto: isoToDD_MM(addDiasIso_(et.fim_iso, 1)) + ' → ' + isoToDD_MM_YY(et.realizacao_iso) };
   }
+  // Concluído antes do prazo previsto: mostra a data real (anterior ao baseline).
+  if (et.status === 'ok' && et.adiantamento > 0) {
+    return { label: 'Concluído antes do prazo', texto: isoToDD_MM_YY(et.realizacao_iso) };
+  }
   return { label: 'Realizado em', texto: isoToDD_MM_YY(et.realizacao_iso) };
 }
 
@@ -591,7 +595,7 @@ function render(filtered) {
         var barReal = document.createElement('div');
         barReal.className = 'bar ' + (STATUS_COLORS[et.status] || 'b-pendente');
         barReal.style.width = '100%';
-        barReal.textContent = et.status==='ok' ? '✓' : et.status==='atrasado' ? '+'+et.dias+'d' : et.status==='andamento' ? '…' : '';
+        barReal.textContent = et.status==='ok' ? (et.adiantamento > 0 ? '−'+et.adiantamento+'d' : '✓') : et.status==='atrasado' ? '+'+et.dias+'d' : et.status==='andamento' ? '…' : '';
         breal.appendChild(barReal); ebr.gt.appendChild(breal);
         (function(proc, etapa){
           breal.addEventListener('mouseenter', function(e){ showEtapaTT(e, proc, etapa); });
@@ -821,7 +825,8 @@ function showEtapaTT(e, p, et) {
   // "Realizado" só aparece quando DataRealizacao foi preenchida na planilha.
   // Etapas em andamento ou não iniciadas ficam sem esta linha.
   var realizadoInfo = periodoRealizadoEtapa_(et);
-  var diasHtml   = (et.status === 'ok' && et.dias && et.dias > 0) ? '<div class="tt-row"><span class="tt-k">Atraso registrado</span><span class="tt-v bad">+' + et.dias + ' dia' + (et.dias > 1 ? 's' : '') + '</span></div>' : '';
+  var diasHtml   = (et.status === 'ok' && et.dias && et.dias > 0) ? '<div class="tt-row"><span class="tt-k">Atraso registrado</span><span class="tt-v bad">+' + et.dias + ' dia' + (et.dias > 1 ? 's' : '') + '</span></div>'
+    : (et.status === 'ok' && et.adiantamento && et.adiantamento > 0) ? '<div class="tt-row"><span class="tt-k">Adiantamento</span><span class="tt-v ok">−' + et.adiantamento + ' dia' + (et.adiantamento > 1 ? 's' : '') + '</span></div>' : '';
   // Motivo só aparece se houver atraso real (et.dias > 0) — evita mostrar
   // motivos preenchidos manualmente em etapas que não atrasaram de fato.
   var motivoHtml = '';
@@ -1370,10 +1375,13 @@ function renderMobileList(filtered) {
             }
           }
 
-          // Atraso
+          // Atraso / Adiantamento
           if (et.status === 'ok' && et.dias && et.dias > 0) {
             addRow('Atraso registrado', '+' + et.dias + ' dia' + (et.dias > 1 ? 's' : ''), 'var(--danger)');
             // Último item sem border-bottom
+            detalhe.lastChild.style.borderBottom = 'none';
+          } else if (et.status === 'ok' && et.adiantamento && et.adiantamento > 0) {
+            addRow('Adiantamento', '−' + et.adiantamento + ' dia' + (et.adiantamento > 1 ? 's' : ''), 'var(--success)');
             detalhe.lastChild.style.borderBottom = 'none';
           } else {
             if (detalhe.lastChild) detalhe.lastChild.style.borderBottom = 'none';

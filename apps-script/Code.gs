@@ -583,9 +583,11 @@ function getDados() {
         // Para etapas não concluídas (sem DataRealizacao), atraso = 0;
         // o painel calculará "atrasado há X dias" dinamicamente a partir de hoje.
         var atraso = 0;
+        var adiantamento = 0;
         if (dataRealizacao && base > 0) {
-          atraso = contarDiasUteis(fimSemAtraso, dataRealizacao);
-          if (atraso < 0) atraso = 0; // adiantamento → sem atraso registrado
+          var diffDias = contarDiasUteis(fimSemAtraso, dataRealizacao);
+          if (diffDias > 0) atraso = diffDias;         // realizou depois do prazo
+          else if (diffDias < 0) adiantamento = -diffDias; // realizou adiantado
         }
 
         // Avança o cursor:
@@ -605,7 +607,9 @@ function getDados() {
         var prazoIni     = dateToMonthIdx(ini);
         var prazoFim     = dateToMonthIdx(fim);           // fim real (com ou sem atraso)
         var prazoFimBase = dateToMonthIdx(fimSemAtraso);  // fim previsto puro (sem atraso)
-        var realFim      = atraso > 0 ? prazoFim : prazoFimBase;
+        // real_fim reflete a data real de conclusão nos dois sentidos: com atraso
+        // estende além do baseline; com adiantamento recua antes dele.
+        var realFim      = dataRealizacao ? prazoFim : prazoFimBase;
 
         return {
           nome:         nome,
@@ -615,8 +619,9 @@ function getDados() {
           prazo_ini:    prazoIni,     // mês de início previsto
           prazo_fim:    prazoFimBase, // mês de fim original (sem atraso — prazo puro da Portaria)
           real_ini:     prazoIni,     // mês de início real (igual ao previsto — início não atrasa)
-          real_fim:     realFim,      // mês de fim real (pode ser > prazo_fim se houver atraso)
+          real_fim:     realFim,      // mês de fim real (> prazo_fim se atraso, < se adiantamento)
           dias:         atraso,       // dias de atraso calculados (DataRealizacao - fimSemAtraso)
+          adiantamento: adiantamento, // dias de adiantamento (fimSemAtraso - DataRealizacao)
           motivo:       motivo,       // justificativa do atraso
           realizacao_iso: dataRealizacao ? (dataRealizacao.getFullYear() + '-' + String(dataRealizacao.getMonth()+1).padStart(2,'0') + '-' + String(dataRealizacao.getDate()).padStart(2,'0')) : null,
           // ISO da data de início e fim — usado no tooltip para calcular
