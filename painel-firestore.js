@@ -149,11 +149,14 @@
         var naoAplica = status === 'naoaplica';
         var fimSemAtraso = adicionarDias(new Date(ini.getTime()), naoAplica ? 0 : base);
 
-        var atraso = 0;
+        // diffDias: diferença (em dias corridos) entre a data real de conclusão
+        // e o fim previsto. Negativo = concluído adiantado; positivo = atrasado.
+        var diffDias = 0;
         if (dataRealizacao && base > 0) {
-          atraso = contarDias(fimSemAtraso, dataRealizacao);
-          if (atraso < 0) atraso = 0;
+          diffDias = contarDias(fimSemAtraso, dataRealizacao);
         }
+        var atraso = diffDias > 0 ? diffDias : 0;
+        var adiantamento = diffDias < 0 ? -diffDias : 0;
 
         if (dataRealizacao && base > 0) {
           cursor = new Date(dataRealizacao.getTime());
@@ -165,13 +168,17 @@
         var prazoIni = dateToMonthIdx(ini);
         var prazoFimBase = dateToMonthIdx(fimSemAtraso);
         var prazoFim = dateToMonthIdx(fim);
-        var realFim = atraso > 0 ? prazoFim : prazoFimBase;
+        // real_fim reflete a data real de conclusão nos dois sentidos: quando há
+        // atraso a barra real estende além do baseline; quando há adiantamento
+        // ela recua antes do baseline, mostrando a situação real também quando o
+        // processo foi mais rápido que o previsto.
+        var realFim = dataRealizacao ? prazoFim : prazoFimBase;
 
         return {
           nome: nome, agente: agente, fase: fase, status: status,
           prazo_ini: prazoIni, prazo_fim: prazoFimBase,
           real_ini: prazoIni, real_fim: realFim,
-          dias: atraso, motivo: motivo,
+          dias: atraso, adiantamento: adiantamento, motivo: motivo,
           realizacao_iso: dataRealizacao ? isoLocal(dataRealizacao) : null,
           ini_iso: isoLocal(ini),
           fim_iso: isoLocal(fimSemAtraso),
