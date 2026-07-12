@@ -246,13 +246,22 @@
     return { processos: resultado, geradoEm: new Date().toISOString() };
   }
 
+  // IDs de unidade são slugs (fs_criarUnidade). Qualquer outro caractere —
+  // em especial "/" — faz doc() lançar erro síncrono; como o valor era
+  // persistido ANTES de validar, um link malformado (?u=a/b) quebrava o
+  // painel em TODAS as visitas seguintes daquele navegador. Sanitizar aqui
+  // também "cura" um localStorage já contaminado.
+  function _slugUnidade(v) {
+    return String(v == null ? '' : v).trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  }
+
   // Unidade alvo (prioridade): ?u= na URL (link direto, e persiste) → última
   // unidade escolhida (localStorage) → config → reitoria-sel.
   function _unidadeId() {
     try {
-      var u = new URLSearchParams(root.location.search).get('u');
-      if (u) { try { root.localStorage.setItem('painel_unidade', u.trim()); } catch (e) {} return u.trim(); }
-      var ls = root.localStorage.getItem('painel_unidade');
+      var u = _slugUnidade(new URLSearchParams(root.location.search).get('u'));
+      if (u) { try { root.localStorage.setItem('painel_unidade', u); } catch (e) {} return u; }
+      var ls = _slugUnidade(root.localStorage.getItem('painel_unidade'));
       if (ls) return ls;
     } catch (e) {}
     return (root.PAINEL_CONFIG && root.PAINEL_CONFIG.unidadeId) || 'reitoria-sel';
