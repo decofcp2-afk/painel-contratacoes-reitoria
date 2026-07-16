@@ -1110,6 +1110,29 @@ function isMobile() {
   return window.innerWidth <= 768;
 }
 
+/* Estado do filtro de modalidade (desktop — via legenda clicável) */
+var activeModal = '';   // '' = todas | 'PE' | 'CD' | 'CC'
+
+/*
+ * setModalFilter(mod)
+ * Filtra o Gantt (e a lista) por modalidade ao clicar num item da legenda.
+ * Clicar no item já ativo limpa o filtro (volta a mostrar todas).
+ */
+function setModalFilter(mod) {
+  activeModal = (activeModal === mod) ? '' : mod;
+  var bar = document.getElementById('legenda-bar');
+  if (bar) {
+    bar.classList.toggle('filtrando', !!activeModal);
+    Array.prototype.forEach.call(bar.querySelectorAll('.legenda-item'), function(it) {
+      it.classList.toggle('active', activeModal && it.getAttribute('data-modal') === activeModal);
+    });
+    var hint = document.getElementById('legenda-hint');
+    if (hint) hint.hidden = !activeModal;
+  }
+  salvarFiltros();
+  applyFilters();
+}
+
 /* Estado do filtro de modalidade (mobile) */
 var activeMobModal = '';
 
@@ -1543,7 +1566,9 @@ function applyFilters() {
       var anoEnd   = anoStart + 11;
       matchA = (p.inicio <= anoEnd && p.fim >= anoStart);
     }
-    return matchQ && matchS && matchA;
+    // Filtro por modalidade (legenda clicável do desktop)
+    var matchMod = !activeModal || (p.modalidade || '').toUpperCase() === activeModal;
+    return matchQ && matchS && matchA && matchMod;
   });
   // Ordenar: atrasados em curso → andamento → atrasados concluídos (100%) →
   // planejamento → outros.
@@ -1615,7 +1640,8 @@ function salvarFiltros() {
       busca:  document.getElementById('f-search').value || '',
       status: activeStatus,
       escala: escalaAtiva,
-      ano:    activeAno
+      ano:    activeAno,
+      modal:  activeModal
     };
     localStorage.setItem(LS_KEY, JSON.stringify(estado));
   } catch(e) { /* localStorage indisponível — sem ação */ }
@@ -1662,6 +1688,20 @@ function restaurarFiltros() {
       activeAno = estado.ano;
       var sel = document.getElementById('ano-select');
       if (sel) sel.value = activeAno;
+    }
+
+    // Restaura filtro de modalidade (legenda)
+    if (estado.modal) {
+      activeModal = estado.modal;
+      var bar = document.getElementById('legenda-bar');
+      if (bar) {
+        bar.classList.add('filtrando');
+        Array.prototype.forEach.call(bar.querySelectorAll('.legenda-item'), function(it) {
+          it.classList.toggle('active', it.getAttribute('data-modal') === activeModal);
+        });
+        var hint = document.getElementById('legenda-hint');
+        if (hint) hint.hidden = false;
+      }
     }
   } catch(e) { /* estado corrompido — ignora */ }
 }
