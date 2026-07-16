@@ -511,6 +511,7 @@ function getDados() {
       var d0raw    = p['D0 (Data Abertura)']       || null;  // data de abertura (D0)
       var linkSuap = String(p['Link SUAP']         || '#').trim();
       var temIRP   = String(p['Tem IRP?']          || 'Não').trim();
+      var tipoCD   = String(p['Tipo Contratação Direta'] || '').trim();  // subtipo da CD: Adesão, Dispensa com/sem disputa, Inexigibilidade
       var d0       = parseDateValue(d0raw);  // converte para objeto Date
       var d0Simulado = false;
       // Processo sem D0 fica na fila: gera uma data futura apenas para exibição no Gantt.
@@ -704,6 +705,7 @@ function getDados() {
         suap:       linkSuap || '#', // URL do processo no SUAP
         motivo:     motivoProc,      // motivo de atraso exibido no tooltip
         modalidade: modalAbrev(modal), // PE | CD | CC
+        tipoCD:     modalAbrev(modal) === 'CD' ? tipoCD : '', // subtipo (só p/ Contratação Direta)
         temIRP:     temIRP === 'Sim',  // true se tiver Intenção de Registro de Preços
         etapas:     etapasCalc       // array com todas as etapas calculadas
       };
