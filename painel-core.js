@@ -720,6 +720,42 @@ function motivoProcessoExibivel_(p) {
 var ttPinned = false;  // true quando o tooltip está fixado por clique
 
 /*
+ * _modalidadeChip_(mod)
+ * Retorna um "chip" HTML identificando a modalidade do processo, com a mesma
+ * convenção de cor das barras do Gantt (dourado = Contratação Direta,
+ * azul = Pregão, verde = Concorrência). Serve para o gestor identificar de
+ * relance, dentro do tooltip, que se trata de uma contratação direta.
+ */
+function _subtipoCDLabel_(tipoCD) {
+  // Normaliza o subtipo da Contratação Direta para um rótulo amigável, na mesma
+  // nomenclatura do app de gestão (art. 74/75 da Lei 14.133/2021).
+  var t = (tipoCD || '').toLowerCase();
+  if (!t) return '';
+  if (t.indexOf('ades') >= 0)          return 'Adesão (carona)';
+  if (t.indexOf('com disputa') >= 0)   return 'Dispensa c/ disputa';
+  if (t.indexOf('sem disputa') >= 0)   return 'Dispensa s/ disputa';
+  if (t.indexOf('inexig') >= 0)        return 'Inexigibilidade';
+  if (t.indexOf('dispensa') >= 0)      return 'Dispensa';
+  return tipoCD;  // valor livre não previsto — mostra como veio
+}
+
+function _modalidadeChip_(mod, tipoCD) {
+  var m = (mod || '').toUpperCase();
+  var info = m === 'CD' ? { txt: 'Contratação Direta', cor: '201,162,42' }
+           : m === 'CC' ? { txt: 'Concorrência',        cor: '45,80,22'   }
+           : m === 'PE' ? { txt: 'Pregão Eletrônico',   cor: '30,78,140'  }
+           : null;
+  if (!info) return '';
+  // Para Contratação Direta, acrescenta o subtipo (adesão, dispensa, etc.).
+  var sub = m === 'CD' ? _subtipoCDLabel_(tipoCD) : '';
+  var texto = info.txt + (sub ? ' · ' + sub : '');
+  return '<span class="tt-mod" style="background:rgba(' + info.cor + ',.15);' +
+         'border:1px solid rgba(' + info.cor + ',.55);color:var(--text);' +
+         'font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;' +
+         'display:inline-block;letter-spacing:.2px">' + esc(texto) + '</span>';
+}
+
+/*
  * showProcTT(e, p)
  * Monta o HTML do tooltip de processo com: status, % de execução,
  * barra de progresso inline, período, link do SUAP.
@@ -790,6 +826,7 @@ function showProcTT(e, p) {
     : '';
   tt.innerHTML =
     '<div class="tt-head">' + (p.num && p.num.indexOf('SEL-') !== 0 ? 'N° ' + esc(p.num) : esc(p.nome)) + '</div>' +
+    (_modalidadeChip_(p.modalidade, p.tipoCD) ? '<div class="tt-row"><span class="tt-k">Modalidade</span>' + _modalidadeChip_(p.modalidade, p.tipoCD) + '</div>' : '') +
     '<div class="tt-row"><span class="tt-k">Status</span>' + statusV + '</div>' +
     '<div class="tt-row"><span class="tt-k">Execução</span>' +
       '<div class="pbar-wrap" style="min-width:120px">' +
@@ -1228,6 +1265,14 @@ function renderMobileList(filtered) {
 
     info.appendChild(num);
     info.appendChild(nome);
+    // Chip de modalidade — mesma identificação visual do tooltip do desktop.
+    var chipHtml = _modalidadeChip_(p.modalidade, p.tipoCD);
+    if (chipHtml) {
+      var chipWrap = document.createElement('div');
+      chipWrap.style.margin = '4px 0 2px';
+      chipWrap.innerHTML = chipHtml;
+      info.appendChild(chipWrap);
+    }
     info.appendChild(progWrap);
 
     // Chevron

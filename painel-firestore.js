@@ -119,6 +119,7 @@
       var modal = String(p.modalidade || '').trim();
       var linkSuap = String(p.linkSuap || '#').trim();
       var temIRP = (p.temIrp === true || String(p.temIrp).trim() === 'Sim');
+      var tipoCD = String(p.tipoCD || '').trim();  // subtipo da CD: Adesão, Dispensa com/sem disputa, Inexigibilidade
 
       var d0 = parseTs(p.d0);
       var d0Simulado = false;
@@ -238,6 +239,7 @@
         suap: linkSuap || '#',
         motivo: motivoProc,
         modalidade: modalAbrev(modal),
+        tipoCD: modalAbrev(modal) === 'CD' ? tipoCD : '',
         temIRP: temIRP,
         etapas: etapasCalc
       };
