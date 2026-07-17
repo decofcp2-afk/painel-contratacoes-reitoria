@@ -96,6 +96,14 @@ function fecharTrocaUnidade(){ document.getElementById('u-modal').style.display=
     each('.status-btn', function(b){ b.addEventListener('click', function(){ setStatusFilter(this, this.getAttribute('data-s') || ''); }); });
     each('.escala-btn', function(b){ b.addEventListener('click', function(){ setEscala(this, this.getAttribute('data-e')); }); });
     each('.mob-modal-btn', function(b){ b.addEventListener('click', function(){ setMobModal(this, this.getAttribute('data-m') || ''); }); });
+    // Legenda clicável (filtro por modalidade). Handlers via addEventListener
+    // porque a CSP (script-src sem 'unsafe-inline') bloqueia onclick inline.
+    each('.legenda-item[data-modal]', function(it){
+      it.addEventListener('click', function(){ setModalFilter(this.getAttribute('data-modal')); });
+      it.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalFilter(this.getAttribute('data-modal')); }
+      });
+    });
 
     var uModal = byId('u-modal');
     on(uModal, 'click', function(e){ if (e.target === uModal) fecharTrocaUnidade(); });
