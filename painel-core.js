@@ -1615,7 +1615,12 @@ function updateKPIs(filtered) {
   document.getElementById('kv-and').textContent  = activeStatus === 'atrasado' ? '——' : kpiVal(emAndamento.length);
   // "Atrasados" exclui processos já concluídos (mesmo que tenham tido atraso)
   document.getElementById('kv-atra').textContent = kpiVal(atrasadosAtivos.length);
-  var basePlan = activeStatus ? filtered : DATA;
+  // "Em fila": quando não há filtro de status, o array 'filtered' não inclui a
+  // fila; por isso a base é DATA. Mas ainda deve respeitar o filtro de
+  // modalidade da legenda — senão o KPI conta processos de outras modalidades.
+  var basePlan = activeStatus
+    ? filtered
+    : DATA.filter(function(p){ return !activeModal || (p.modalidade || '').toUpperCase() === activeModal; });
   document.getElementById('kv-plan').textContent = kpiVal(basePlan.filter(function(p){ return p.status === 'planejamento' || p.status === 'fila'; }).length);
   document.getElementById('kv-conc').textContent = kpiVal(concluidos.length);
 }
