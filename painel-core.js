@@ -726,34 +726,9 @@ var ttPinned = false;  // true quando o tooltip está fixado por clique
  * azul = Pregão, verde = Concorrência). Serve para o gestor identificar de
  * relance, dentro do tooltip, que se trata de uma contratação direta.
  */
-function _subtipoCDLabel_(tipoCD) {
-  // Normaliza o subtipo da Contratação Direta para um rótulo amigável, na mesma
-  // nomenclatura do app de gestão (art. 74/75 da Lei 14.133/2021).
-  var t = (tipoCD || '').toLowerCase();
-  if (!t) return '';
-  if (t.indexOf('ades') >= 0)          return 'Adesão (carona)';
-  if (t.indexOf('com disputa') >= 0)   return 'Dispensa c/ disputa';
-  if (t.indexOf('sem disputa') >= 0)   return 'Dispensa s/ disputa';
-  if (t.indexOf('inexig') >= 0)        return 'Inexigibilidade';
-  if (t.indexOf('dispensa') >= 0)      return 'Dispensa';
-  return tipoCD;  // valor livre não previsto — mostra como veio
-}
-
-function _modalidadeChip_(mod, tipoCD) {
-  var m = (mod || '').toUpperCase();
-  var info = m === 'CD' ? { txt: 'Contratação Direta', cor: '201,162,42' }
-           : m === 'CC' ? { txt: 'Concorrência',        cor: '45,80,22'   }
-           : m === 'PE' ? { txt: 'Pregão Eletrônico',   cor: '30,78,140'  }
-           : null;
-  if (!info) return '';
-  // Para Contratação Direta, acrescenta o subtipo (adesão, dispensa, etc.).
-  var sub = m === 'CD' ? _subtipoCDLabel_(tipoCD) : '';
-  var texto = info.txt + (sub ? ' · ' + sub : '');
-  return '<span class="tt-mod" style="background:rgba(' + info.cor + ',.15);' +
-         'border:1px solid rgba(' + info.cor + ',.55);color:var(--text);' +
-         'font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;' +
-         'display:inline-block;letter-spacing:.2px">' + esc(texto) + '</span>';
-}
+// Lógica pura (testável) em painel-logic.js → window.PainelLogic.
+function _subtipoCDLabel_(tipoCD) { return PainelLogic.subtipoCDLabel(tipoCD); }
+function _modalidadeChip_(mod, tipoCD) { return PainelLogic.modalidadeChip(mod, tipoCD); }
 
 /*
  * showProcTT(e, p)
@@ -1538,60 +1513,16 @@ function renderVazio() {
 
 function applyFilters() {
   if (!DATA.length) { renderVazio(); return; }
-  var q = document.getElementById('f-search').value.toLowerCase();
-  var filtered = DATA.filter(function(p) {
-    var matchQ = !q || (p.num + ' ' + p.nome).toLowerCase().indexOf(q) >= 0;
-    var matchS;
-    if (!activeStatus) {
-      // "Todos" = em andamento + atrasados + concluidos; exclui a fila (a iniciar + retornados)
-      matchS = p.status !== 'planejamento' && p.status !== 'fila';
-    } else if (activeStatus === 'andamento') {
-      // "Andamento" inclui processos em andamento E os atrasados ainda nao concluidos
-      matchS = p.status === 'andamento' || p.status === 'aguardando' || p.status === 'paralisado' || (p.status === 'atrasado' && p.execucao < 100);
-    } else if (activeStatus === 'atrasado') {
-      // "Atrasado" mostra apenas os atrasados nao concluidos
-      matchS = p.status === 'atrasado' && p.execucao < 100;
-    } else if (activeStatus === 'planejamento') {
-      // "Em fila" = processos nunca iniciados (planejamento) + devolvidos à fila (fila)
-      matchS = p.status === 'planejamento' || p.status === 'fila';
-    } else {
-      matchS = p.status === activeStatus;
-    }
-    // Filtro por ano: verifica se o processo tem inicio OU fim dentro do ano selecionado
-    var matchA = true;
-    if (activeAno) {
-      var anoInt = parseInt(activeAno);
-      // indices de mes para Jan e Dez do ano selecionado
-      var anoStart = (anoInt - ANO_BASE) * 12;
-      var anoEnd   = anoStart + 11;
-      matchA = (p.inicio <= anoEnd && p.fim >= anoStart);
-    }
-    // Filtro por modalidade (legenda clicável do desktop). No mobile a
-    // legenda fica oculta (display:none) e o mobile tem filtro próprio
-    // (activeMobModal) — então o activeModal persistido no localStorage NÃO
-    // deve ser aplicado lá, senão a lista fica filtrada de forma invisível.
-    var modalFiltro = isMobile() ? '' : activeModal;
-    var matchMod = !modalFiltro || (p.modalidade || '').toUpperCase() === modalFiltro;
-    return matchQ && matchS && matchA && matchMod;
-  });
-  // Ordenar: atrasados em curso → andamento → atrasados concluídos (100%) →
-  // planejamento → outros.
-  // Atrasados concluídos perdem a prioridade de topo: como o processo já foi
-  // entregue, o ícone de alerta some e ele não precisa mais chamar atenção —
-  // mas ainda fica acima dos "planejamento" porque é um processo efetivo.
-  function ordemStatus(p) {
-    // Concluídos (100% ou status ok) sempre no final, independente do status
-    if (p.execucao === 100 || p.status === 'ok') return 6;
-    if (p.status === 'atrasado')     return 0; // atrasados em curso: topo
-    if (p.status === 'aguardando')   return 1;
-    if (p.status === 'paralisado')   return 2;
-    if (p.status === 'andamento')    return 3;
-    if (p.status === 'planejamento') return 4;
-    return 5;
-  }
-  filtered.sort(function(a, b) {
-    return ordemStatus(a) - ordemStatus(b);
-  });
+  // Regras de filtro/ordenação vivem em painel-logic.js (testadas em tests/).
+  // `mobile: isMobile()` faz a legenda (desktop-only) não vazar para o mobile.
+  var filtered = PainelLogic.ordenarProcessos(PainelLogic.filtrarProcessos(DATA, {
+    q: document.getElementById('f-search').value,
+    status: activeStatus,
+    ano: activeAno,
+    anoBase: ANO_BASE,
+    modal: activeModal,
+    mobile: isMobile()
+  }));
   if (isMobile()) {
     renderMobileList(filtered);
   } else {
@@ -1608,26 +1539,18 @@ function applyFilters() {
 function updateKPIs(filtered) {
   // KPI "Total de Processos" = em andamento + atrasados (não concluídos) + concluídos
   // Exclui processos na fila (planejamento) — eles têm KPI própria
+  // Contagens em painel-logic.js (testadas em tests/); aqui fica só a
+  // formatação: '——' para zero e para KPIs sem sentido no filtro ativo.
   function kpiVal(n) { return n > 0 ? n : '——'; }
-  var concluidos = filtered.filter(function(p){ return p.status === 'ok' || p.execucao === 100; });
-  var atrasadosAtivos = filtered.filter(function(p){ return p.status === 'atrasado' && p.execucao < 100; });
-  var emAndamento = filtered.filter(function(p){ return p.status === 'andamento' || p.status === 'aguardando' || p.status === 'paralisado' || (p.status === 'atrasado' && p.execucao < 100); });
-  var tot = concluidos.length + atrasadosAtivos.length +
-    filtered.filter(function(p){ return p.status === 'andamento' || p.status === 'aguardando' || p.status === 'paralisado'; }).length;
-  document.getElementById('kv-tot').textContent  = activeStatus ? '——' : kpiVal(tot);
+  var k = PainelLogic.calcularKPIs(filtered, DATA, {
+    status: activeStatus, modal: activeModal, mobile: isMobile()
+  });
+  document.getElementById('kv-tot').textContent  = activeStatus ? '——' : kpiVal(k.tot);
   // "Em Andamento" exibe '——' quando o filtro Atrasado está ativo (contextos mutuamente exclusivos)
-  document.getElementById('kv-and').textContent  = activeStatus === 'atrasado' ? '——' : kpiVal(emAndamento.length);
-  // "Atrasados" exclui processos já concluídos (mesmo que tenham tido atraso)
-  document.getElementById('kv-atra').textContent = kpiVal(atrasadosAtivos.length);
-  // "Em fila": quando não há filtro de status, o array 'filtered' não inclui a
-  // fila; por isso a base é DATA. Mas ainda deve respeitar o filtro de
-  // modalidade da legenda — senão o KPI conta processos de outras modalidades.
-  var modalFiltroKpi = isMobile() ? '' : activeModal;  // legenda é desktop-only
-  var basePlan = activeStatus
-    ? filtered
-    : DATA.filter(function(p){ return !modalFiltroKpi || (p.modalidade || '').toUpperCase() === modalFiltroKpi; });
-  document.getElementById('kv-plan').textContent = kpiVal(basePlan.filter(function(p){ return p.status === 'planejamento' || p.status === 'fila'; }).length);
-  document.getElementById('kv-conc').textContent = kpiVal(concluidos.length);
+  document.getElementById('kv-and').textContent  = activeStatus === 'atrasado' ? '——' : kpiVal(k.andamento);
+  document.getElementById('kv-atra').textContent = kpiVal(k.atrasados);
+  document.getElementById('kv-plan').textContent = kpiVal(k.fila);
+  document.getElementById('kv-conc').textContent = kpiVal(k.concluidos);
 }
 
 // ════════════════════════════════════════════════════════════════

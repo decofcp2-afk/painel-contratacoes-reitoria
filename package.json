@@ -1,0 +1,9 @@
+{
+  "name": "painel-contratacoes-reitoria",
+  "version": "1.0.0",
+  "description": "Painel público de contratações — testes da lógica de filtros, KPIs e identificação de modalidade (painel-logic.js).",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  }
+}
