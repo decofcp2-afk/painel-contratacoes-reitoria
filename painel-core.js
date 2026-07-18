@@ -1566,8 +1566,12 @@ function applyFilters() {
       var anoEnd   = anoStart + 11;
       matchA = (p.inicio <= anoEnd && p.fim >= anoStart);
     }
-    // Filtro por modalidade (legenda clicável do desktop)
-    var matchMod = !activeModal || (p.modalidade || '').toUpperCase() === activeModal;
+    // Filtro por modalidade (legenda clicável do desktop). No mobile a
+    // legenda fica oculta (display:none) e o mobile tem filtro próprio
+    // (activeMobModal) — então o activeModal persistido no localStorage NÃO
+    // deve ser aplicado lá, senão a lista fica filtrada de forma invisível.
+    var modalFiltro = isMobile() ? '' : activeModal;
+    var matchMod = !modalFiltro || (p.modalidade || '').toUpperCase() === modalFiltro;
     return matchQ && matchS && matchA && matchMod;
   });
   // Ordenar: atrasados em curso → andamento → atrasados concluídos (100%) →
@@ -1618,9 +1622,10 @@ function updateKPIs(filtered) {
   // "Em fila": quando não há filtro de status, o array 'filtered' não inclui a
   // fila; por isso a base é DATA. Mas ainda deve respeitar o filtro de
   // modalidade da legenda — senão o KPI conta processos de outras modalidades.
+  var modalFiltroKpi = isMobile() ? '' : activeModal;  // legenda é desktop-only
   var basePlan = activeStatus
     ? filtered
-    : DATA.filter(function(p){ return !activeModal || (p.modalidade || '').toUpperCase() === activeModal; });
+    : DATA.filter(function(p){ return !modalFiltroKpi || (p.modalidade || '').toUpperCase() === modalFiltroKpi; });
   document.getElementById('kv-plan').textContent = kpiVal(basePlan.filter(function(p){ return p.status === 'planejamento' || p.status === 'fila'; }).length);
   document.getElementById('kv-conc').textContent = kpiVal(concluidos.length);
 }
