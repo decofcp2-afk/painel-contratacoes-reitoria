@@ -164,17 +164,17 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .unit-selector:hover{background:rgba(201,162,42,.3);border-color:var(--cpii-gold)}
 /* ── Menu "Links Úteis" (canto superior direito) ── */
 .links-uteis-wrap{position:relative}
-.links-uteis-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:226px;background:#fff;border:1px solid rgba(11,29,51,.12);border-radius:10px;box-shadow:0 14px 40px rgba(8,18,33,.28);padding:6px;z-index:300;opacity:0;transform:translateY(-10px) scaleY(.95);transform-origin:top right;pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+.links-uteis-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:252px;background:#fff;border:1px solid rgba(11,29,51,.12);border-radius:10px;box-shadow:0 14px 40px rgba(8,18,33,.28);padding:6px;z-index:300;opacity:0;transform:translateY(-10px) scaleY(.95);transform-origin:top right;pointer-events:none;transition:opacity .18s ease,transform .18s ease}
 .links-uteis-menu.open{opacity:1;transform:translateY(0) scaleY(1);pointer-events:auto}
-.links-uteis-menu a{display:flex;align-items:center;gap:9px;padding:10px 12px;font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--cpii-navy,#0b1d33);text-decoration:none;border-radius:7px;white-space:nowrap;opacity:0;transform:translateX(10px)}
-.links-uteis-menu a:hover{background:rgba(30,78,140,.08)}
-.links-uteis-menu.open a{animation:luItemIn .26s cubic-bezier(.22,1,.36,1) forwards}
-.links-uteis-menu.open a:nth-child(1){animation-delay:.03s}
-.links-uteis-menu.open a:nth-child(2){animation-delay:.07s}
-.links-uteis-menu.open a:nth-child(3){animation-delay:.11s}
-.links-uteis-menu.open a:nth-child(4){animation-delay:.15s}
-.links-uteis-menu.open a:nth-child(5){animation-delay:.19s}
-@keyframes luItemIn{to{opacity:1;transform:translateX(0)}}
+.links-uteis-menu a,.lu-submenu summary{display:flex;align-items:center;gap:9px;padding:10px 12px;font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--cpii-navy,#0b1d33);text-decoration:none;border-radius:7px;white-space:nowrap}
+.links-uteis-menu a:hover,.lu-submenu summary:hover{background:rgba(30,78,140,.08)}
+.links-uteis-menu a:focus-visible,.lu-submenu summary:focus-visible{outline:2px solid var(--cpii-gold);outline-offset:-2px}
+.lu-submenu summary{cursor:pointer;list-style:none}
+.lu-submenu summary::-webkit-details-marker{display:none}
+.lu-submenu summary::after{content:'▾';margin-left:auto;font-size:12px;transition:transform .18s}
+.lu-submenu[open] summary::after{transform:rotate(180deg)}
+.lu-submenu-links{margin:2px 0 5px 17px;padding-left:9px;border-left:2px solid rgba(201,162,42,.5)}
+.lu-submenu-links a{font-size:13px;padding:9px 10px;white-space:normal}
 /* No desktop a Ajuda fica como botão próprio ao lado de Links Úteis; no mobile
    ela volta para dentro do menu (.ajuda-link-mob) para o cabeçalho não lotar. */
 .ajuda-link-mob{display:none}
@@ -883,10 +883,16 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
       <button class="top-meta" id="links-uteis-btn" aria-haspopup="true" aria-expanded="false" title="Links úteis" aria-label="Links úteis">🔗<span class="lu-label"> Links Úteis ▾</span></button>
       <div class="links-uteis-menu" id="links-uteis-menu">
         <a href="https://decofcp2-afk.github.io/app_gestao-reitoria/" target="_blank" rel="noopener" data-close-lu>🔒 Acesso Restrito</a>
-        <a href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/944690/" target="_blank" rel="noopener" data-close-lu>📄 Portaria 638/2026</a>
-        <a href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/997254/" target="_blank" rel="noopener" data-close-lu>📄 Portaria 2820/2026</a>
+        <details class="lu-submenu">
+          <summary>📄 Portarias</summary>
+          <div class="lu-submenu-links">
+            <a href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/944690/" target="_blank" rel="noopener" data-close-lu>Portaria 638/2026</a>
+            <a href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/997254/" target="_blank" rel="noopener" data-close-lu>Portaria 2820/2026</a>
+          </div>
+        </details>
         <a href="https://decofcp2-afk.github.io/proad-fluxos/" target="_blank" rel="noopener" data-close-lu>🔗 Fluxos PROAD</a>
         <a href="https://portalespiral.cp2.g12.br/index.php/materialinstitucional/article/view/4903/2825" target="_blank" rel="noopener" data-close-lu>📋 POP</a>
+        <a href="atas.html" data-close-lu>📚 Atas</a>
         <a href="#" class="ajuda-link-mob">❓ Ajuda</a>
       </div>
     </div>
@@ -1120,7 +1126,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
       <h4>📅 Cronograma (Gantt)</h4>
       <p>Cada linha é um processo e suas etapas. Os <b>prazos são contados em dias corridos</b> (incluindo fins de semana e feriados). A linha vertical marca o mês atual.</p>
       <h4>🔗 Links Úteis</h4>
-      <p>No canto superior direito você encontra o acesso restrito (gestão), a portaria, os fluxos da PROAD e o POP.</p>
+      <p>No canto superior direito você encontra o acesso restrito (gestão), as portarias, os fluxos da PROAD, o POP e a seção Atas em preparação.</p>
       <p style="color:#64748b;font-size:12.5px;margin-top:14px">Os dados são atualizados automaticamente a partir do sistema de gestão das unidades.</p>
     </div>
   </div>
