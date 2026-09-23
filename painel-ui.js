@@ -20,12 +20,18 @@ function closeLinksUteis(){
   }
   if (btn) btn.setAttribute('aria-expanded', 'false');
 }
-// Fecha o menu ao clicar fora dele
+function closeDesktopPortarias(){
+  var submenu = document.querySelector('.desktop-portarias');
+  if (submenu) submenu.open = false;
+}
+// Fecha os menus ao clicar fora deles
 document.addEventListener('click', function(e){
   var wrap = document.querySelector('.links-uteis-wrap');
   if (wrap && !wrap.contains(e.target)) closeLinksUteis();
+  var portarias = document.querySelector('.desktop-portarias');
+  if (portarias && !portarias.contains(e.target)) closeDesktopPortarias();
 });
-document.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ closeLinksUteis(); fecharAjuda(); } });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ closeLinksUteis(); closeDesktopPortarias(); fecharAjuda(); } });
 
 function abrirAjuda(){ var m = document.getElementById('ajuda-modal'); if (m) m.classList.add('open'); }
 function fecharAjuda(){ var m = document.getElementById('ajuda-modal'); if (m) m.classList.remove('open'); }
@@ -95,7 +101,7 @@ function fecharTrocaUnidade(){ document.getElementById('u-modal').style.display=
 
     on(byId('btn-troca-unidade'), 'click', function(){ abrirTrocaUnidade(); });
     on(byId('links-uteis-btn'), 'click', function(e){ toggleLinksUteis(e); });
-    on(document.querySelector('.ajuda-btn-desktop'), 'click', function(){ abrirAjuda(); });
+    each('.desktop-portarias-menu a', function(a){ a.addEventListener('click', closeDesktopPortarias); });
     on(document.querySelector('.ajuda-link-mob'), 'click', function(e){ e.preventDefault(); closeLinksUteis(); abrirAjuda(); });
     each('[data-close-lu]', function(a){ a.addEventListener('click', function(){ closeLinksUteis(); }); });
 
