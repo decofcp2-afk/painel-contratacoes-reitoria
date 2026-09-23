@@ -33,3 +33,10 @@ test('Todos inclui situação não confirmada; status específicos excluem', () 
   assert.equal(filterAtas(records, {...f, status:'vigente'}, '2026-09-23').length, 1);
   assert.equal(filterAtas(records, {...f, status:'nao-vigente'}, '2026-09-23').length, 0);
 });
+
+test('objetos com diferença de espaços e acentos ficam próximos na ordenação', () => {
+  const records = [ata({objeto:'Zeladoria'}), ata({objeto:'Aquisição   de\nMobiliário'}), ata({objeto:'aquisicao de mobiliario'})];
+  const f = {objeto:'', numero:'', ano:'', compra:'', status:'todos'};
+  assert.deepEqual(filterAtas(records, f, '2026-09-23').map(a => a.objeto),
+    ['Aquisição   de\nMobiliário', 'aquisicao de mobiliario', 'Zeladoria']);
+});
