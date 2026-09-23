@@ -154,6 +154,22 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .brand-title{font-size:14px;font-weight:600;color:var(--text2);letter-spacing:.3px;line-height:1.2}
 .brand-chip{background:rgba(201,162,42,.15);color:var(--cpii-gold);border:1px solid rgba(201,162,42,.35);font-family:var(--mono);font-size:13px;font-weight:700;padding:4px 10px;border-radius:3px;letter-spacing:1.5px;margin-left:3px}
 .top-right{display:flex;align-items:center;gap:8px}
+.desktop-quick-links{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.desktop-quick-links .top-meta{min-height:28px;cursor:pointer}
+.desktop-portarias{position:relative}
+.desktop-portarias summary{list-style:none}
+.desktop-portarias summary::-webkit-details-marker{display:none}
+.desktop-portarias summary:focus-visible,.desktop-quick-links a:focus-visible,.desktop-quick-links button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.desktop-portarias-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:195px;padding:6px;background:#fff;border:1px solid rgba(11,29,51,.12);border-radius:9px;box-shadow:0 14px 40px rgba(8,18,33,.28);z-index:310}
+.desktop-portarias-menu a{display:block;padding:10px 12px;border-radius:6px;color:var(--cpii-navy);font:600 13px var(--sans);text-decoration:none}
+.desktop-portarias-menu a:hover,.desktop-portarias-menu a:focus-visible{background:rgba(30,78,140,.08)}
+.desktop-quick-links .acesso-restrito-desktop{margin-left:10px;border-color:rgba(201,162,42,.6)}
+.links-uteis-wrap{display:none}
+@media (max-width:1200px){
+  .desktop-quick-links{display:none}
+  .links-uteis-wrap{display:block}
+  .links-uteis-menu .ajuda-link-mob{display:flex}
+}
 .top-meta{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--cpii-navy);background:rgba(201,162,42,.15);border:1px solid rgba(201,162,42,.35);padding:2px 7px;border-radius:3px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;transition:background .2s,border-color .2s}
 .top-meta:hover{background:rgba(201,162,42,.3);border-color:var(--cpii-gold)}
 .btn-refresh{background:rgba(255,255,255,.15);border:1px solid rgba(201,162,42,.4);color:var(--cpii-gold);font-family:var(--mono);font-size:12px;font-weight:700;padding:4px 10px;border-radius:10px;cursor:pointer;letter-spacing:1px;transition:all .2s}
@@ -176,8 +192,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .lu-submenu-links{margin:2px 0 5px 17px;padding-left:9px;border-left:2px solid rgba(201,162,42,.5)}
 .lu-submenu-links a{font-size:13px;padding:9px 10px;white-space:normal}
 .links-uteis-menu .acesso-restrito-link{justify-content:flex-end;border-top:1px solid #e2e8f0;border-radius:0;margin-top:5px;padding-top:13px;font-size:12.5px;color:#475569}
-/* No desktop a Ajuda fica como botão próprio ao lado de Links Úteis; no mobile
-   ela volta para dentro do menu (.ajuda-link-mob) para o cabeçalho não lotar. */
+/* A Ajuda fica no menu compacto de tablet e celular. */
 .ajuda-link-mob{display:none}
 /* ── Modal de ajuda ── */
 .ajuda-backdrop{display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,18,33,.6);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:24px 16px;overflow:auto}
@@ -787,7 +802,6 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   /* o seletor de unidade (#btn-troca-unidade) agora fica na marca e deve aparecer no mobile */
   .unit-selector { font-size: 10px; padding: 2px 8px; letter-spacing: .3px; }
   /* no mobile a Ajuda volta para dentro do menu Links Úteis */
-  .ajuda-btn-desktop { display: none; }
   .ajuda-link-mob { display: flex; }
   .brand-title { font-size: 12px; }
   .brand-inst  { font-size: 10px; }
@@ -880,6 +894,19 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
     <button class="unit-selector" id="btn-troca-unidade" title="Trocar a unidade exibida">🏛️ Reitoria ▾</button>
   </div>
   <div class="top-right">
+    <nav class="desktop-quick-links" aria-label="Acesso rápido">
+      <details class="desktop-portarias">
+        <summary class="top-meta">📄 Portarias ▾</summary>
+        <div class="desktop-portarias-menu">
+          <a href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/944690/" target="_blank" rel="noopener">Portaria 638/2026</a>
+          <a href="https://suap.cp2.g12.br/documento_eletronico/visualizar_documento_digitalizado/997254/" target="_blank" rel="noopener">Portaria 2820/2026</a>
+        </div>
+      </details>
+      <a class="top-meta" href="https://decofcp2-afk.github.io/proad-fluxos/" target="_blank" rel="noopener">🔗 Fluxos PROAD</a>
+      <a class="top-meta" href="https://portalespiral.cp2.g12.br/index.php/materialinstitucional/article/view/4903/2825" target="_blank" rel="noopener">📋 POP</a>
+      <a class="top-meta" href="atas.html">📚 Atas</a>
+      <a class="top-meta acesso-restrito-desktop" href="https://decofcp2-afk.github.io/app_gestao-reitoria/" target="_blank" rel="noopener">🔒 Acesso Restrito</a>
+    </nav>
     <div class="links-uteis-wrap">
       <button class="top-meta" id="links-uteis-btn" aria-haspopup="true" aria-expanded="false" title="Links úteis" aria-label="Links úteis">🔗<span class="lu-label"> Links Úteis ▾</span></button>
       <div class="links-uteis-menu" id="links-uteis-menu">
@@ -897,7 +924,6 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
         <a class="acesso-restrito-link" href="https://decofcp2-afk.github.io/app_gestao-reitoria/" target="_blank" rel="noopener" data-close-lu>🔒 Acesso Restrito</a>
       </div>
     </div>
-    <button class="top-meta ajuda-btn-desktop" title="Como usar este painel">❓ Ajuda</button>
   </div>
 </div>
 <!-- Menu flutuante de links para mobile pequeno -->
@@ -1126,8 +1152,8 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
       </ul>
       <h4>📅 Cronograma (Gantt)</h4>
       <p>Cada linha é um processo e suas etapas. Os <b>prazos são contados em dias corridos</b> (incluindo fins de semana e feriados). A linha vertical marca o mês atual.</p>
-      <h4>🔗 Links Úteis</h4>
-      <p>No canto superior direito você encontra o acesso restrito (gestão), as portarias, os fluxos da PROAD, o POP e a seção Atas em preparação.</p>
+      <h4>🔗 Acessos rápidos</h4>
+      <p>No canto superior direito você encontra as portarias, os fluxos da PROAD, o POP, a seção Atas em preparação e o acesso restrito (gestão).</p>
       <p style="color:#64748b;font-size:12.5px;margin-top:14px">Os dados são atualizados automaticamente a partir do sistema de gestão das unidades.</p>
     </div>
   </div>
