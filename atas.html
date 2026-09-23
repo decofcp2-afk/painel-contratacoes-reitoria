@@ -1,45 +1,72 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Atas | Painel de Contratações — Colégio Pedro II</title>
-  <style>
-    :root{font-family:Arial,Helvetica,sans-serif;color:#0b1d33;background:#f4f7fb}
-    *{box-sizing:border-box}
-    body{margin:0;min-height:100vh}
-    header{background:#0b1d33;color:#fff;border-bottom:4px solid #c9a22a}
-    .wrap{max-width:1000px;margin:auto;padding:0 24px}
-    header .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:72px}
-    .brand{font-size:14px;font-weight:700;letter-spacing:.3px}
-    header a{color:#fff;text-decoration:none;font-size:14px;font-weight:700}
-    header a:hover,header a:focus-visible{text-decoration:underline}
-    main{padding-top:72px;padding-bottom:72px}
-    .card{background:#fff;border:1px solid #dce4ef;border-radius:12px;box-shadow:0 8px 26px rgba(11,29,51,.08);padding:clamp(24px,5vw,48px)}
-    .eyebrow{color:#8b6c12;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px}
-    h1{font-size:clamp(30px,5vw,44px);margin:10px 0 18px}
-    p{line-height:1.6;color:#475569;max-width:640px}
-    .status{display:inline-block;margin-top:16px;padding:8px 12px;border-radius:6px;background:#fdf5d9;color:#60480c;font-size:13px;font-weight:700}
-    .back{display:inline-block;margin-top:32px;padding:12px 18px;background:#0b1d33;color:#fff;text-decoration:none;border-radius:6px;font-weight:700}
-    .back:hover,.back:focus-visible{background:#1e4e8c}
-  </style>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; base-uri 'self'; object-src 'none'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#0b1f3d">
+  <meta name="description" content="Consulte atas de registro de preços gerenciadas pelo Colégio Pedro II, com busca por objeto e links para o PNCP.">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="atas.css">
+  <title>Consulta de atas | Colégio Pedro II</title>
+  <script src="atas-logic.js" defer></script>
+  <script src="atas-ui.js" defer></script>
 </head>
 <body>
-  <header>
-    <div class="wrap">
-      <div class="brand">Colégio Pedro II · Painel de Contratações</div>
-      <a href="index.html">← Voltar ao painel</a>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="index.html" aria-label="Voltar ao Painel de Contratações">
+        <span class="brand-mark" aria-hidden="true">CPII</span>
+        <span><strong>COLÉGIO PEDRO II</strong><small>Painel de Contratações</small></span>
+      </a>
+      <a class="back-link" href="index.html">← <span>Voltar ao painel</span></a>
     </div>
   </header>
-  <main class="wrap">
-    <section class="card" aria-labelledby="atas-titulo">
-      <div class="eyebrow">Nova seção</div>
-      <h1 id="atas-titulo">Atas</h1>
-      <p>Este espaço está em preparação. O conteúdo e a organização das atas serão definidos antes da publicação dos dados.</p>
-      <p>O painel permite selecionar a unidade; essa escolha será considerada ao planejar as informações desta seção.</p>
-      <span class="status">Em planejamento</span><br>
-      <a class="back" href="index.html">Voltar ao painel</a>
+  <main class="container">
+    <div class="breadcrumb">Painel de Contratações <span aria-hidden="true">/</span> <strong>Atas</strong></div>
+    <section class="intro" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">CONSULTA PÚBLICA · REGISTRO DE PREÇOS</p>
+        <h1 id="page-title">Atas</h1>
+        <p class="intro-copy">Encontre atas pelo objeto da contratação e consulte os documentos oficiais no PNCP.</p>
+      </div>
+      <div class="scope-box">
+        <span class="scope-icon" aria-hidden="true">⌕</span>
+        <div><strong>Colégio Pedro II</strong><span>Atas gerenciadas · UASG 153167</span></div>
+      </div>
     </section>
+    <section class="search-panel" aria-labelledby="search-title">
+      <div class="section-heading"><div><p class="eyebrow">EXPLORE AS ATAS</p><h2 id="search-title">Buscar e filtrar</h2></div></div>
+      <div class="primary-filters">
+        <div class="field keyword-field">
+          <label for="objeto">Objeto da ata</label>
+          <input id="objeto" type="search" placeholder="Ex.: material de expediente, mobiliário…" autocomplete="off">
+          <span class="field-hint">Digite uma ou mais palavras, em qualquer ordem.</span>
+        </div>
+        <fieldset class="status-field">
+          <legend>Status</legend>
+          <div class="status-options">
+            <label><input type="radio" name="status" value="vigente" checked><span>Vigentes</span></label>
+            <label><input type="radio" name="status" value="todos"><span>Todos</span></label>
+            <label><input type="radio" name="status" value="nao-vigente"><span>Não vigentes</span></label>
+          </div>
+        </fieldset>
+      </div>
+      <div class="secondary-filters">
+        <div class="field"><label for="numero">Número da ata</label><input id="numero" type="search" placeholder="Ex.: 12/2025" autocomplete="off"></div>
+        <div class="field"><label for="ano">Ano da ata</label><select id="ano"><option value="">Todos os anos</option></select></div>
+        <div class="field"><label for="compra">Número da compra</label><input id="compra" type="search" placeholder="Ex.: 90012/2025" autocomplete="off"></div>
+      </div>
+      <div class="filters-footer"><div id="active-filters" class="active-filters" aria-label="Filtros ativos"></div><button id="clear-filters" class="clear-button" type="button">Limpar filtros</button></div>
+    </section>
+    <aside class="coverage-note"><strong>Escopo desta versão</strong><span>Esta consulta mostra as atas em que o Colégio Pedro II é gerenciador. Participação em atas de outros órgãos e adesões como não participante exigem cruzamento adicional dos dados por item. A unidade selecionada no painel não altera este escopo.</span></aside>
+    <section class="results" aria-labelledby="results-title">
+      <div class="results-heading"><div><p class="eyebrow">RESULTADOS</p><h2 id="results-title">Atas disponíveis</h2><p id="updated-at" class="updated-at"></p></div><p id="result-count" class="result-count" role="status" aria-live="polite">Carregando…</p></div>
+      <div id="result-list" class="result-list" aria-live="polite"><div class="empty-state">Carregando atas…</div></div>
+      <button id="show-more" class="show-more" type="button" hidden>Mostrar mais atas</button>
+    </section>
+    <footer class="page-footer">Fonte: <a href="https://dadosabertos.compras.gov.br/" target="_blank" rel="noopener noreferrer">Dados Abertos do Compras.gov.br</a> · Consulte o PNCP para conferir os documentos e a situação oficial de cada ata.</footer>
   </main>
 </body>
 </html>
