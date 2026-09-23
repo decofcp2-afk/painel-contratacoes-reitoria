@@ -7,7 +7,8 @@
   const statusLabels = {vigente:'Vigentes', 'nao-vigente':'Não vigentes', indefinida:'Situação a conferir'};
   let items = [];
   let loaded = false;
-  let visible = 24;
+  let visible = 10;
+  const openGroups = new Set();
 
   function todayInBrazil() {
     const parts = new Intl.DateTimeFormat('en-US', {timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
@@ -61,12 +62,10 @@
   function card(ata, today) {
     const article = element('article', 'ata-card');
     const top = element('div', 'card-top');
-    const title = element('div');
-    title.append(element('p', 'card-label', 'OBJETO DA ATA'), element('h3', '', ata.objeto || 'Objeto não informado'));
+    const title = element('strong', 'card-identity', `Ata ${ata.numeroAtaRegistroPreco || 'sem número'}`);
     const status = logic.situation(ata, today);
     top.append(title, element('span', `badge ${status}`, statusLabels[status]));
     const details = element('dl', 'card-details');
-    addDetail(details, 'ATA', ata.numeroAtaRegistroPreco);
     addDetail(details, 'COMPRA', [ata.numeroCompra, ata.anoCompra].filter(Boolean).join('/'));
     addDetail(details, 'VIGÊNCIA', `${formatDate(ata.dataVigenciaInicial)} a ${formatDate(ata.dataVigenciaFinal)}`);
     addDetail(details, 'UASG GERENCIADORA', String(ata.codigoUnidadeGerenciadora || '153167'));
@@ -75,6 +74,27 @@
     addLink(links, ata.linkCompraPNCP, 'Ver compra');
     article.append(top, details, links);
     return article;
+  }
+
+  function objectGroup(key, value, records, today, expand) {
+    const heading = element('details', 'object-group');
+    heading.open = expand || openGroups.has(key);
+    heading.addEventListener('toggle', () => {
+      if (heading.open) openGroups.add(key);
+      else openGroups.delete(key);
+    });
+    const description = String(value || 'Objeto não informado').replace(/\s+/g, ' ').trim();
+    const summary = element('summary', 'object-heading');
+    summary.append(element('span', 'card-label', 'OBJETO DA ATA'), element('span', 'object-title', description),
+      element('span', 'object-count', `${records.length} ${records.length === 1 ? 'ata' : 'atas'} deste objeto`));
+    heading.append(summary);
+    if (description.length > 230) {
+      heading.append(element('p', 'object-full', description));
+    }
+    const rows = element('div', 'object-rows');
+    records.forEach(ata => rows.append(card(ata, today)));
+    heading.append(rows);
+    return heading;
   }
 
   function renderChips(f) {
@@ -89,7 +109,7 @@
       button.addEventListener('click', () => {
         if (key === 'status') document.querySelector('input[name="status"][value="todos"]').checked = true;
         else $(key).value = '';
-        visible = 24;
+        visible = 10;
         render();
       });
       box.append(button);
@@ -111,14 +131,25 @@
     if (!loaded) return;
     const today = todayInBrazil();
     const result = logic.filterAtas(items, f, today);
-    $('result-count').textContent = `${result.length} ${result.length === 1 ? 'ata encontrada' : 'atas encontradas'}`;
+    const groups = new Map();
+    result.forEach(ata => {
+      const key = logic.normalize(ata.objeto);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(ata);
+    });
+    $('result-count').textContent = `${result.length} ${result.length === 1 ? 'ata' : 'atas'} em ${groups.size} ${groups.size === 1 ? 'objeto' : 'objetos'}`;
     if (!result.length) {
       empty('Tente mudar o status, usar menos palavras ou limpar os filtros.', 'Nenhuma ata encontrada');
       return;
     }
-    $('result-list').replaceChildren(...result.slice(0, visible).map(ata => card(ata, today)));
-    $('show-more').hidden = result.length <= visible;
-    $('show-more').textContent = `Mostrar mais atas (${result.length - visible} restantes)`;
+    const output = document.createDocumentFragment();
+    const expand = Boolean(f.objeto || f.numero || f.ano || f.compra) || groups.size <= 3;
+    [...groups].slice(0, visible).forEach(([key, records]) => {
+      output.append(objectGroup(key, records[0].objeto, records, today, expand));
+    });
+    $('result-list').replaceChildren(output);
+    $('show-more').hidden = groups.size <= visible;
+    $('show-more').textContent = `Mostrar mais objetos (${groups.size - visible} restantes)`;
   }
 
   function loadYears() {
@@ -164,15 +195,15 @@
     }
   }
 
-  for (const id of fields) $(id).addEventListener(id === 'ano' ? 'change' : 'input', () => {visible = 24; render();});
-  document.querySelectorAll('input[name="status"]').forEach(radio => radio.addEventListener('change', () => {visible = 24; render();}));
+  for (const id of fields) $(id).addEventListener(id === 'ano' ? 'change' : 'input', () => {visible = 10; render();});
+  document.querySelectorAll('input[name="status"]').forEach(radio => radio.addEventListener('change', () => {visible = 10; render();}));
   $('clear-filters').addEventListener('click', () => {
     fields.forEach(id => {$(id).value = '';});
     document.querySelector('input[name="status"][value="todos"]').checked = true;
-    visible = 24;
+    visible = 10;
     render();
   });
-  $('show-more').addEventListener('click', () => {visible += 24; render();});
+  $('show-more').addEventListener('click', () => {visible += 10; render();});
   renderChips(filters());
   load();
 })();
