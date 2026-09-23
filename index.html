@@ -175,6 +175,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .lu-submenu[open] summary::after{transform:rotate(180deg)}
 .lu-submenu-links{margin:2px 0 5px 17px;padding-left:9px;border-left:2px solid rgba(201,162,42,.5)}
 .lu-submenu-links a{font-size:13px;padding:9px 10px;white-space:normal}
+.links-uteis-menu .acesso-restrito-link{justify-content:flex-end;border-top:1px solid #e2e8f0;border-radius:0;margin-top:5px;padding-top:13px;font-size:12.5px;color:#475569}
 /* No desktop a Ajuda fica como botão próprio ao lado de Links Úteis; no mobile
    ela volta para dentro do menu (.ajuda-link-mob) para o cabeçalho não lotar. */
 .ajuda-link-mob{display:none}
@@ -882,7 +883,6 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
     <div class="links-uteis-wrap">
       <button class="top-meta" id="links-uteis-btn" aria-haspopup="true" aria-expanded="false" title="Links úteis" aria-label="Links úteis">🔗<span class="lu-label"> Links Úteis ▾</span></button>
       <div class="links-uteis-menu" id="links-uteis-menu">
-        <a href="https://decofcp2-afk.github.io/app_gestao-reitoria/" target="_blank" rel="noopener" data-close-lu>🔒 Acesso Restrito</a>
         <details class="lu-submenu">
           <summary>📄 Portarias</summary>
           <div class="lu-submenu-links">
@@ -894,6 +894,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
         <a href="https://portalespiral.cp2.g12.br/index.php/materialinstitucional/article/view/4903/2825" target="_blank" rel="noopener" data-close-lu>📋 POP</a>
         <a href="atas.html" data-close-lu>📚 Atas</a>
         <a href="#" class="ajuda-link-mob">❓ Ajuda</a>
+        <a class="acesso-restrito-link" href="https://decofcp2-afk.github.io/app_gestao-reitoria/" target="_blank" rel="noopener" data-close-lu>🔒 Acesso Restrito</a>
       </div>
     </div>
     <button class="top-meta ajuda-btn-desktop" title="Como usar este painel">❓ Ajuda</button>
