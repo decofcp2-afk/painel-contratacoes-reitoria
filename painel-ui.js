@@ -5,11 +5,19 @@ function toggleLinksUteis(ev){
   if (!menu) return;
   var aberto = menu.classList.toggle('open');
   if (btn) btn.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+  if (!aberto) {
+    var submenu = menu.querySelector('.lu-submenu');
+    if (submenu) submenu.open = false;
+  }
 }
 function closeLinksUteis(){
   var menu = document.getElementById('links-uteis-menu');
   var btn  = document.getElementById('links-uteis-btn');
-  if (menu) menu.classList.remove('open');
+  if (menu) {
+    menu.classList.remove('open');
+    var submenu = menu.querySelector('.lu-submenu');
+    if (submenu) submenu.open = false;
+  }
   if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 // Fecha o menu ao clicar fora dele
