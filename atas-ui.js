@@ -9,6 +9,24 @@
   let loaded = false;
   let visible = 10;
   const openGroups = new Set();
+  const DEFAULT_UNIT = '153167';
+  const API = 'https://dadosabertos.compras.gov.br/modulo-arp/1_consultarARP';
+  const REPO_RAW = 'https://raw.githubusercontent.com/decofcp2-afk/painel-contratacoes-reitoria/main/';
+  const knownUnits = [
+    {codigo:'153167', nome:'Colégio Pedro II · Reitoria', orgao:'26201'},
+    {codigo:'155624', nome:'Colégio Pedro II · Campus Humaitá I', orgao:'26201'},
+    {codigo:'155625', nome:'Colégio Pedro II · Campus Niterói', orgao:'26201'},
+    {codigo:'155627', nome:'Colégio Pedro II · Campus Realengo II', orgao:'26201'},
+    {codigo:'155628', nome:'Colégio Pedro II · Campus Centro', orgao:'26201'},
+    {codigo:'155629', nome:'Colégio Pedro II · Campus Humaitá II', orgao:'26201'},
+    {codigo:'155630', nome:'Colégio Pedro II · Campus São Cristóvão I', orgao:'26201'},
+    {codigo:'155636', nome:'Colégio Pedro II · Campus Engenho Novo II', orgao:'26201'},
+    {codigo:'155637', nome:'Colégio Pedro II · Campus Duque de Caxias', orgao:'26201'},
+  ];
+  let units = knownUnits;
+  let selectedUnit = knownUnits[0];
+  let currentRequest;
+  const unitCache = new Map();
 
   function todayInBrazil() {
     const parts = new Intl.DateTimeFormat('en-US', {timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
@@ -38,6 +56,82 @@
     if (className) node.className = className;
     if (value != null) node.textContent = String(value);
     return node;
+  }
+
+  function isCPII(unit) {
+    return unit.orgao === '26201' || unit.cnpjOrgao === '42414284000102' ||
+      logic.normalize(unit.nome).includes('colegio pedro ii');
+  }
+
+  function displayUnit(unit) {
+    return unit.nome === `UASG ${unit.codigo}` ? unit.nome : `${unit.nome} — UASG ${unit.codigo}`;
+  }
+
+  function renderUnitOptions() {
+    const term = logic.normalize($('unit-search').value);
+    const words = term.split(/\s+/).filter(Boolean);
+    const matches = units.filter(unit => words.every(word =>
+      logic.normalize([unit.nome, unit.nomeOrgao, unit.codigo].join(' ')).includes(word)));
+    matches.sort((a, b) => Number(isCPII(b)) - Number(isCPII(a)) ||
+      logic.normalize(a.nome).localeCompare(logic.normalize(b.nome), 'pt-BR'));
+    const box = $('unit-options');
+    box.replaceChildren();
+    let previousGroup = '';
+    matches.slice(0, 60).forEach(unit => {
+      const group = isCPII(unit) ? 'Colégio Pedro II' : 'Outros órgãos';
+      if (group !== previousGroup) box.append(element('div', 'unit-group-title', group));
+      previousGroup = group;
+      const button = element('button', 'unit-option', unit.nome);
+      button.type = 'button';
+      button.append(element('small', '', `UASG ${unit.codigo}${unit.nomeOrgao ? ' · ' + unit.nomeOrgao : ''}`));
+      if (unit.codigo === selectedUnit.codigo) button.setAttribute('aria-current', 'true');
+      button.addEventListener('click', () => chooseUnit(unit));
+      box.append(button);
+    });
+    if (!matches.length) box.append(element('p', 'unit-empty', 'Nenhuma UASG encontrada neste catálogo.'));
+    if (/^\d{6}$/.test(term) && !units.some(unit => unit.codigo === term)) {
+      const button = element('button', 'unit-option', `Consultar UASG ${term}`);
+      button.type = 'button';
+      button.addEventListener('click', () => chooseUnit({codigo:term, nome:`UASG ${term}`}));
+      box.append(button);
+    }
+    $('unit-help').textContent = units.length === knownUnits.length
+      ? 'Catálogo completo indisponível no momento. As unidades conhecidas do CPII estão listadas; também é possível consultar pelo código de seis dígitos.'
+      : !term ? 'Digite parte do nome do órgão ou da unidade para buscar em outras UASGs.'
+        : matches.length > 60 ? `Exibindo 60 de ${matches.length} unidades. Refine a busca pelo nome ou número.` : '';
+  }
+
+  async function loadUnitCatalog() {
+    try {
+      let response;
+      try {
+        response = await fetch(REPO_RAW + 'uasg-catalog.json', {cache:'no-cache'});
+        if (!response.ok) throw new Error('Catálogo remoto indisponível');
+      } catch { response = await fetch('uasg-catalog.json', {cache:'no-cache'}); }
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!Array.isArray(data.items) || !data.items.length) return;
+      const byCode = new Map(data.items.filter(unit => /^\d{6}$/.test(String(unit.codigo)) && unit.nome)
+        .map(unit => [String(unit.codigo), {...unit, codigo:String(unit.codigo), orgao:String(unit.orgao || '')}]));
+      // Nomes legíveis conhecidos ficam disponíveis inclusive se a fonte oficial oscilar.
+      knownUnits.forEach(unit => byCode.set(unit.codigo, {...byCode.get(unit.codigo), ...unit}));
+      units = [...byCode.values()];
+      renderUnitOptions();
+    } catch { /* O campo de código e as unidades conhecidas permanecem disponíveis. */ }
+  }
+
+  function chooseUnit(unit) {
+    if (selectedUnit.codigo === unit.codigo) { $('unit-picker').open = false; return; }
+    if (currentRequest) currentRequest.abort();
+    selectedUnit = unit;
+    $('selected-unit').textContent = displayUnit(unit);
+    $('coverage-text').textContent = `Atas gerenciadas pela UASG ${unit.codigo}. Participações e adesões a atas de outros órgãos não estão incluídas. A unidade selecionada no painel não altera esta consulta.`;
+    $('unit-picker').open = false;
+    $('unit-search').value = '';
+    renderUnitOptions();
+    visible = 10;
+    openGroups.clear();
+    load();
   }
 
   function addLink(parent, urlValue, number) {
@@ -155,6 +249,8 @@
   }
 
   function loadYears() {
+    $('ano').replaceChildren(element('option', '', 'Todos os anos'));
+    $('ano').firstChild.value = '';
     const years = [...new Set(items.map(logic.ataYear).filter(Boolean))].sort().reverse();
     years.forEach(year => {
       const option = element('option', '', year);
@@ -163,37 +259,82 @@
     });
   }
 
-  async function load() {
+  async function loadDefault(signal) {
+    // O workflow publica no GitHub mesmo quando o Pages não recompila o site.
+    let response;
     try {
-      // O workflow atualiza o arquivo no GitHub. O Pages hospedado por branch
-      // pode não recompilar após commits feitos pelo GITHUB_TOKEN.
-      let response;
-      try {
-        response = await fetch('https://raw.githubusercontent.com/decofcp2-afk/painel-contratacoes-reitoria/main/atas-data.json', {cache:'no-cache'});
-        if (!response.ok) throw new Error('Arquivo no GitHub indisponível');
-      } catch {
-        response = await fetch('atas-data.json', {cache:'no-cache'});
+      response = await fetch(REPO_RAW + 'atas-data.json', {cache:'no-cache', signal});
+      if (!response.ok) throw new Error('Arquivo remoto indisponível');
+    } catch (error) {
+      if (signal.aborted) throw error;
+      response = await fetch('atas-data.json', {cache:'no-cache', signal});
+    }
+    if (!response.ok) throw new Error('Arquivo de atas indisponível');
+    const payload = await response.json();
+    if (!payload.generatedAt || !Array.isArray(payload.items)) {
+      throw new Error('A primeira atualização dos dados ainda não foi concluída');
+    }
+    return {items:payload.items.filter(ata => ata && String(ata.codigoUnidadeGerenciadora) === DEFAULT_UNIT), generatedAt:payload.generatedAt, cached:true};
+  }
+
+  async function loadFromCompras(code, signal) {
+    const years = Array.from({length:new Date().getFullYear() - 2021 + 1}, (_, index) => 2021 + index);
+    const batches = await Promise.all(years.map(async year => {
+      const records = [];
+      for (let page = 1; ; page++) {
+        const query = new URLSearchParams({codigoUnidadeGerenciadora:code,
+          dataVigenciaInicialMin:`${year}-01-01`, dataVigenciaInicialMax:`${year}-12-31`,
+          tamanhoPagina:'500', pagina:String(page)});
+        const response = await fetch(API + '?' + query, {signal});
+        if (!response.ok) throw new Error(`Consulta oficial indisponível (${response.status})`);
+        const payload = await response.json();
+        if (!Array.isArray(payload.resultado) || !Number.isInteger(payload.totalPaginas) ||
+            payload.totalPaginas < 0 || payload.totalPaginas > 100) throw new Error('Paginação inesperada na API oficial');
+        records.push(...payload.resultado.filter(ata => ata && String(ata.codigoUnidadeGerenciadora) === code));
+        if (page >= payload.totalPaginas) return records;
       }
-      if (!response.ok) throw new Error('Falha ao carregar arquivo de atas');
-      const payload = await response.json();
-      if (!payload.generatedAt || !Array.isArray(payload.items)) {
-        $('result-count').textContent = 'Aguardando dados';
-        empty('A primeira atualização do Compras.gov.br ainda não foi concluída. Volte em breve.', 'Consulta em preparação');
-        return;
-      }
-      items = payload.items.filter(ata => ata && typeof ata === 'object' && String(ata.codigoUnidadeGerenciadora) === '153167');
-      const generated = new Date(payload.generatedAt);
-      if (!Number.isNaN(generated.valueOf())) {
-        const stamp = new Intl.DateTimeFormat('pt-BR', {timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(generated);
-        const delayed = Date.now() - generated.valueOf() > 48 * 60 * 60 * 1000;
-        $('updated-at').textContent = `Dados atualizados em ${stamp} (horário de Brasília)${delayed ? ' · Atualização atrasada; confira a ata no PNCP' : ''}`;
-      }
-      loaded = true;
+    }));
+    const unique = new Map();
+    batches.flat().forEach(ata => {
+      const key = ata.numeroControlePncpAta || [code, ata.numeroAtaRegistroPreco, ata.numeroCompra, ata.anoCompra].join('|');
+      unique.set(key, ata);
+    });
+    return {items:[...unique.values()], generatedAt:new Date().toISOString(), cached:false};
+  }
+
+  async function load() {
+    const unit = selectedUnit;
+    const request = new AbortController();
+    currentRequest = request;
+    loaded = false;
+    items = [];
+    $('result-count').textContent = `Consultando UASG ${unit.codigo}…`;
+    $('updated-at').textContent = '';
+    empty('Buscando atas da unidade selecionada…');
+    const timeout = setTimeout(() => request.abort(), 90000);
+    try {
+      const payload = unitCache.get(unit.codigo) ||
+        (unit.codigo === DEFAULT_UNIT ? await loadDefault(request.signal) : await loadFromCompras(unit.codigo, request.signal));
+      if (currentRequest !== request) return;
+      unitCache.set(unit.codigo, payload);
+      if (unitCache.size > 4) unitCache.delete(unitCache.keys().next().value);
+      items = payload.items;
       loadYears();
+      const stamp = new Intl.DateTimeFormat('pt-BR', {timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(payload.generatedAt));
+      const delayed = Date.now() - new Date(payload.generatedAt).valueOf() > 48 * 60 * 60 * 1000;
+      $('updated-at').textContent = `${payload.cached ? 'Dados atualizados' : 'Consulta realizada'} em ${stamp} (horário de Brasília)${delayed ? ' · Confira a ata no PNCP' : ''}`;
+      loaded = true;
       render();
     } catch {
-      $('result-count').textContent = 'Indisponível';
-      empty('Não foi possível carregar as atas agora. Tente novamente mais tarde ou consulte o PNCP.', 'Consulta temporariamente indisponível');
+      if (currentRequest !== request) return;
+      $('result-count').textContent = 'Consulta indisponível';
+      empty('Não foi possível consultar esta UASG no Compras.gov.br agora. Selecione outra unidade ou tente novamente mais tarde.', 'Consulta temporariamente indisponível');
+      const retry = element('button', 'show-more', 'Tentar novamente');
+      retry.type = 'button';
+      retry.addEventListener('click', load);
+      $('result-list').append(retry);
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -206,6 +347,12 @@
     render();
   });
   $('show-more').addEventListener('click', () => {visible += 10; render();});
+  $('unit-search').addEventListener('input', renderUnitOptions);
+  $('unit-picker').addEventListener('toggle', () => { if ($('unit-picker').open) $('unit-search').focus(); });
+  $('unit-picker').addEventListener('keydown', event => { if (event.key === 'Escape') $('unit-picker').open = false; });
+  document.addEventListener('click', event => { if (!$('unit-picker').contains(event.target)) $('unit-picker').open = false; });
+  renderUnitOptions();
+  loadUnitCatalog();
   renderChips(filters());
   load();
 })();
