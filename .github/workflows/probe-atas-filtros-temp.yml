@@ -11,7 +11,7 @@ jobs:
       - name: Validate PNCP ata filter catalog
         run: |
           python3 - <<'PY'
-          import urllib.request,json,time
+          import urllib.request,json,time,gzip
           url="https://pncp.gov.br/api/search/filters?tipos_documento=ata"
           for attempt in range(3):
               try:
@@ -19,15 +19,17 @@ jobs:
                   with urllib.request.urlopen(req,timeout=40) as response:
                       raw=response.read()
                       print("CORS",response.headers.get("Access-Control-Allow-Origin"))
+                      print("ENCODING",response.headers.get("Content-Encoding"))
                       print("BYTES",len(raw))
                   break
-              except Exception as e:
+              except Exception:
                   if attempt==2:raise
                   time.sleep(1)
+          if raw[:2]==b"\x1f\x8b":raw=gzip.decompress(raw)
           data=json.loads(raw)
           print("TYPE",type(data).__name__)
           print("KEYS",list(data) if isinstance(data,dict) else "")
           if isinstance(data,dict):
               for k,v in data.items():
-                  print("FIELD",k,type(v).__name__,len(v) if hasattr(v,"__len__") else "",str(v[:3] if isinstance(v,list) else v)[:1600])
+                  print("FIELD",k,type(v).__name__,len(v) if hasattr(v,"__len__") else "",str(v[:3] if isinstance(v,list) else v)[:1800])
           PY
