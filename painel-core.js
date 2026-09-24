@@ -111,12 +111,17 @@ function hideSkeleton() {
  * somente leitura, compativel com GitHub Pages.
  */
 function carregarDados(forcarAtualizacao) {
-  showBanner('loading', 'Carregando dados...');
+  hideBanner();
+  var indicador = document.getElementById('last-update');
+  indicador.className = 'last-update loading';
+  indicador.textContent = 'Carregando dados…';
   showSkeleton();
 
   obterDadosPainel_(forcarAtualizacao)
     .then(function(result) {
       if (result.erro) {
+        indicador.className = 'last-update error';
+        indicador.textContent = 'Falha ao atualizar';
         showBanner('error', 'Aviso: ' + result.erro);
         return;
       }
@@ -124,16 +129,16 @@ function carregarDados(forcarAtualizacao) {
       expanded = {};
 
       var agora = new Date();
-      document.getElementById('last-update').textContent =
-        'Atualizado: ' + agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+      indicador.className = 'last-update';
+      indicador.textContent = 'Atualizado: ' + agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
 
-      showBanner('success', 'OK - ' + DATA.length + ' processos carregados');
-      setTimeout(hideBanner, 3000);
       populateAnoSelect();
       restaurarFiltros();
       applyFilters();
     })
     .catch(function(err) {
+      indicador.className = 'last-update error';
+      indicador.textContent = 'Falha ao atualizar';
       showBanner('error', 'Não foi possível carregar os dados agora: ' + (err.message || err) + ' — tente Atualizar em instantes.');
     });
 
@@ -207,14 +212,13 @@ function updateCapacidade(cap) {
 // BANNER
 // ════════════════════════════════════════════════════════════════
 /*
- * showBanner(type, msg) — exibe a faixa de status com estilo e texto
- * hideBanner()          — oculta a faixa (remove classe de estado)
+ * showBanner(type, msg) — exibe erros em aviso flutuante, sem alterar o layout
+ * hideBanner()          — oculta o aviso na próxima tentativa
  */
 function showBanner(type, msg) {
   var b = document.getElementById('status-banner');
   b.className = 'status-banner ' + type;
   document.getElementById('status-msg').textContent = msg;
-  document.getElementById('status-spinner').style.display = type === 'loading' ? 'block' : 'none';
 }
 function hideBanner() {
   document.getElementById('status-banner').className = 'status-banner';
