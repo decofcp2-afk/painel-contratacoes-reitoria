@@ -1,6 +1,13 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
+const {readFileSync} = require('node:fs');
+const {join} = require('node:path');
 const {mapPNCPRecord, nationalSearchUrl, situation, filterAtas} = require('../atas-logic');
+
+test('política da página autoriza conexão com a busca do PNCP', () => {
+  const page = readFileSync(join(__dirname, '..', 'atas.html'), 'utf8');
+  assert.match(page, /connect-src[^"]*https:\/\/pncp\.gov\.br/);
+});
 
 test('consulta nacional envia objeto, situação e página ao PNCP', () => {
   const url = new URL(nationalSearchUrl({objeto:'computador', status:'nao-vigente'}, 2, 20));
@@ -11,6 +18,18 @@ test('consulta nacional envia objeto, situação e página ao PNCP', () => {
   assert.equal(url.searchParams.get('pagina'), '2');
   assert.equal(url.searchParams.get('tam_pagina'), '20');
   assert.equal(url.searchParams.get('tipos_documento'), 'ata');
+});
+
+test('filtros nacionais são enviados para a API, sem substituir o objeto', () => {
+  const url = new URL(nationalSearchUrl({
+    objeto:'mobiliário', status:'vigente', uf:'RJ', esfera:'F', poder:'E', orgao:'38114'
+  }, 3, 20));
+  assert.equal(url.searchParams.get('q'), 'mobiliário');
+  assert.equal(url.searchParams.get('ufs'), 'RJ');
+  assert.equal(url.searchParams.get('esferas'), 'F');
+  assert.equal(url.searchParams.get('poderes'), 'E');
+  assert.equal(url.searchParams.get('orgaos'), '38114');
+  assert.equal(url.searchParams.get('pagina'), '3');
 });
 
 test('resultado nacional preserva objeto, órgão, vigência, compra e endereço da ata', () => {
