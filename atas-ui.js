@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
   const fields = ['objeto', 'numero', 'ano', 'compra'];
   const labels = {objeto:'Objeto', numero:'Ata', ano:'Ano da ata', compra:'Compra'};
-  const statusLabels = {vigente:'Vigentes', 'nao-vigente':'Não vigentes', indefinida:'Situação a conferir'};
+  const statusLabels = {vigente:'Vigente', 'nao-vigente':'Não vigente', indefinida:'Situação a conferir'};
   let items = [];
   let loaded = false;
   let visible = 10;
@@ -68,7 +68,6 @@
     const details = element('dl', 'card-details');
     addDetail(details, 'COMPRA', [ata.numeroCompra, ata.anoCompra].filter(Boolean).join('/'));
     addDetail(details, 'VIGÊNCIA', `${formatDate(ata.dataVigenciaInicial)} a ${formatDate(ata.dataVigenciaFinal)}`);
-    addDetail(details, 'UASG GERENCIADORA', String(ata.codigoUnidadeGerenciadora || '153167'));
     const links = element('div', 'card-links');
     addLink(links, ata.linkAtaPNCP, 'Ver ata e documentos');
     addLink(links, ata.linkCompraPNCP, 'Ver compra');
@@ -85,7 +84,7 @@
     });
     const description = String(value || 'Objeto não informado').replace(/\s+/g, ' ').trim();
     const summary = element('summary', 'object-heading');
-    summary.append(element('span', 'card-label', 'OBJETO DA ATA'), element('span', 'object-title', description),
+    summary.append(element('span', 'object-title', description),
       element('span', 'object-count', `${records.length} ${records.length === 1 ? 'ata' : 'atas'} deste objeto`));
     heading.append(summary);
     if (description.length > 230) {
@@ -101,20 +100,20 @@
     const box = $('active-filters');
     box.replaceChildren();
     const active = fields.filter(key => f[key]).map(key => [key, `${labels[key]}: ${f[key]}`]);
-    if (f.status !== 'todos') active.unshift(['status', `Status: ${statusLabels[f.status]}`]);
     active.forEach(([key, label]) => {
       const button = element('button', 'filter-chip', `${label} ×`);
       button.type = 'button';
       button.setAttribute('aria-label', `Remover filtro ${label}`);
       button.addEventListener('click', () => {
-        if (key === 'status') document.querySelector('input[name="status"][value="todos"]').checked = true;
-        else $(key).value = '';
+        $(key).value = '';
         visible = 10;
         render();
       });
       box.append(button);
     });
-    $('clear-filters').hidden = active.length === 0;
+    const hasFiltersToClear = active.length > 0 || f.status === 'nao-vigente';
+    $('clear-filters').hidden = !hasFiltersToClear;
+    box.parentElement.hidden = !hasFiltersToClear;
   }
 
   function empty(message, title) {
