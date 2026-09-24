@@ -296,7 +296,7 @@
 
   async function loadFromCompras(code, signal) {
     const years = Array.from({length:new Date().getFullYear() - 2021 + 1}, (_, index) => 2021 + index);
-    const batches = await Promise.all(years.map(async year => {
+    const fetchYear = async year => {
       const records = [];
       for (let page = 1; ; page++) {
         const query = new URLSearchParams({codigoUnidadeGerenciadora:code,
@@ -310,7 +310,11 @@
         records.push(...payload.resultado.filter(ata => ata && String(ata.codigoUnidadeGerenciadora) === code));
         if (page >= payload.totalPaginas) return records;
       }
-    }));
+    };
+    // Verifica uma página antes de consultar os outros anos; evita repetir erros de acesso.
+    const firstYear = years.pop();
+    const firstBatch = await fetchYear(firstYear);
+    const batches = [firstBatch, ...await Promise.all(years.map(fetchYear))];
     const unique = new Map();
     batches.flat().forEach(ata => {
       const key = ata.numeroControlePncpAta || [code, ata.numeroAtaRegistroPreco, ata.numeroCompra, ata.anoCompra].join('|');
