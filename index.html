@@ -211,19 +211,11 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .ajuda-body ul{margin:6px 0;padding-left:20px}
 .ajuda-body li{margin:3px 0}
 
-/* ─────────────────────────────────────────────────────────────
-   BANNER DE STATUS — faixa entre o header e os KPIs
-   Aparece apenas durante o carregamento (class="loading"),
-   em caso de erro ("error") ou confirmação de sucesso ("success").
-   Por padrão é display:none; o JS adiciona a classe correta.
-   ───────────────────────────────────────────────────────────── */
-/* ── BANNER STATUS ── */
-.status-banner{display:none;align-items:center;justify-content:center;gap:10px;padding:10px 24px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.5px;flex-shrink:0}
-.status-banner.loading{display:flex;background:rgba(30,78,140,.08);color:var(--accent2);border-bottom:1px solid rgba(30,78,140,.15)}
-.status-banner.error  {display:flex;background:rgba(176,32,53,.08);color:var(--danger); border-bottom:1px solid rgba(176,32,53,.15)}
-.status-banner.success{display:flex;background:rgba(30,122,69,.08);color:var(--success);border-bottom:1px solid rgba(30,122,69,.15);font-size:10px}
-.spinner{width:14px;height:14px;border:2px solid rgba(30,78,140,.2);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+/* Erros aparecem sobre o painel, sem deslocar os cartões e a tabela. */
+.status-banner{display:none;position:fixed;top:76px;right:16px;z-index:1000;align-items:center;max-width:min(480px,calc(100vw - 32px));padding:12px 16px;border:1px solid rgba(176,32,53,.3);border-radius:9px;box-shadow:0 8px 24px rgba(11,31,61,.15);background:#fff7f8;color:var(--danger);font-family:var(--mono);font-size:11px;line-height:1.5}
+.status-banner.error{display:flex}
 @keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.last-update.loading::before{animation:none}}
 
 /* ─────────────────────────────────────────────────────────────
    KPIs — cartões de resumo numérico no topo do painel
@@ -291,7 +283,10 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .status-btn.active-and {border-color:var(--success);color:var(--success);background:rgba(46,204,113,.06)}
 .status-btn.active-atra{border-color:var(--danger); color:var(--danger); background:rgba(255,77,77,.06)}
 .status-btn.active-plan{border-color:var(--warning);color:var(--warning);background:rgba(240,165,0,.06)}
-.last-update{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto;align-self:center}
+.last-update{display:inline-flex;align-items:center;gap:7px;min-height:20px;font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto;align-self:center;white-space:nowrap}
+.last-update.loading{color:var(--accent2)}
+.last-update.loading::before{content:'';width:12px;height:12px;flex:none;border:2px solid rgba(30,78,140,.2);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite}
+.last-update.error{color:var(--danger)}
 /* ── BOTÕES DE ESCALA TEMPORAL (Mês / Trimestre) e SELECT de Ano ── */
 .escala-group{display:flex;gap:5px;align-items:flex-end}
 .escala-btn{background:var(--s2);border:1px solid var(--border);color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;padding:7px 13px;border-radius:10px;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.5px}
@@ -838,8 +833,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   .ano-select { width: 100%; padding: 8px 28px 8px 12px; min-height: 44px; }
   .last-update { margin-left: 0; font-size: 11px; }
 
-  /* Status banner */
-  .status-banner { font-size: 10px; padding: 8px 12px; }
+  .status-banner { top:64px; font-size:10px; }
 
   /* Footer: oculto no mobile */
   .footer { display: none; }
@@ -936,18 +930,8 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 <!-- Menu flutuante de links para mobile pequeno -->
 <!-- (menu mobile antigo removido — o menu "Links Úteis" do cabeçalho funciona em todas as larguras) -->
 
-<!--
-  BANNER DE STATUS
-  Exibido pelo JS via showBanner(type, msg).
-  type pode ser: 'loading' | 'error' | 'success'
-  O spinner (ícone giratório) aparece apenas durante o carregamento.
-  O banner de sucesso some após 3 segundos (setTimeout hideBanner, 3000).
--->
-<!-- BANNER -->
-<div class="status-banner" id="status-banner">
-  <div class="spinner" id="status-spinner"></div>
-  <span id="status-msg">Carregando dados da planilha…</span>
-</div>
+<!-- Aviso flutuante para erros; o carregamento aparece junto de "Atualizado". -->
+<div class="status-banner" id="status-banner" role="alert"><span id="status-msg"></span></div>
 
 <!--
   KPIs — CARTÕES DE RESUMO
@@ -1016,7 +1000,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
       <option value="">Todos</option>
     </select>
   </div>
-  <span class="last-update" id="last-update"></span>
+  <span class="last-update" id="last-update" role="status" aria-live="polite">Atualizado: —</span>
 </div>
 
 <!--
