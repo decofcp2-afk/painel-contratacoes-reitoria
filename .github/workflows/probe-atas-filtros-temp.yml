@@ -8,28 +8,36 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify national search filters
+      - name: Verify query filters and organ catalog
         run: |
           python3 - <<'PY'
-          import urllib.parse, urllib.request, json
-          base = {"tipos_documento":"ata","q":"computador","status":"todos","pagina":"1","tam_pagina":"5"}
-          variants = [{}, {"ufs":"RJ"}, {"esferas":"F"}, {"poderes":"L"}, {"orgaos":"38114"}]
-          for extra in variants:
-              params = {**base, **extra}
-              req = urllib.request.Request("https://pncp.gov.br/api/search/?" + urllib.parse.urlencode(params),
-                  headers={"Origin":"https://decofcp2-afk.github.io","User-Agent":"Mozilla/5.0","Accept":"application/json"})
+          import urllib.parse, urllib.request, json, time
+          def get(path,params=None):
+              url="https://pncp.gov.br"+path+("?" + urllib.parse.urlencode(params) if params else "")
+              req=urllib.request.Request(url,headers={"Origin":"https://decofcp2-afk.github.io","User-Agent":"Mozilla/5.0","Accept":"application/json"})
+              for attempt in range(3):
+                  try:
+                      with urllib.request.urlopen(req,timeout=20) as resp: return json.load(resp),resp.headers.get("Access-Control-Allow-Origin")
+                  except Exception as e:
+                      if attempt==2: raise
+                      time.sleep(.6)
+          base={"tipos_documento":"ata","q":"computador","status":"todos","pagina":"1","tam_pagina":"5"}
+          for extra in [{},{"ufs":"RJ"},{"esferas":"F"},{"poderes":"L"},{"orgaos":"38114"}]:
               try:
-                  with urllib.request.urlopen(req, timeout=20) as response:
-                      data = json.load(response)
-                      print("FILTER",extra,"total",data.get("total"),"cors",response.headers.get("Access-Control-Allow-Origin"),
-                        "items",[(x.get("orgao_id"),x.get("orgao_nome"),x.get("uf"),x.get("esfera_id"),x.get("poder_id")) for x in data.get("items",[])])
-              except Exception as error: print("FILTER",extra,"ERROR",type(error).__name__,str(error)[:200])
-          for path in ["/api/pncp/v1/orgaos?pagina=1","/pncp-api/v1/orgaos?pagina=1"]:
-              req = urllib.request.Request("https://pncp.gov.br" + path,
-                headers={"Origin":"https://decofcp2-afk.github.io","User-Agent":"Mozilla/5.0","Accept":"application/json"})
+                  data,cors=get("/api/search/",{**base,**extra})
+                  print("FILTER",extra,"total",data.get("total"),"cors",cors,
+                    "items",[(x.get("orgao_id"),x.get("uf"),x.get("esfera_id"),x.get("poder_id")) for x in data.get("items",[])])
+              except Exception as e: print("FILTER",extra,"ERROR",type(e).__name__,str(e)[:180])
+          for params in [{"pagina":"1"},{"razaoSocial":"COLEGIO PEDRO II","pagina":"1"},
+                         {"nome":"COLEGIO PEDRO II","pagina":"1"},{"cnpj":"42414284000102","pagina":"1"}]:
               try:
-                  with urllib.request.urlopen(req, timeout=12) as response:
-                      print("CATALOG",path,response.status,response.headers.get("Access-Control-Allow-Origin"),
-                        response.read(250).decode("utf-8","replace"))
-              except Exception as error: print("CATALOG",path,"ERROR",type(error).__name__,str(error)[:200])
+                  data,cors=get("/api/pncp/v1/orgaos",params)
+                  print("CATALOG",params,"type",type(data).__name__,"length",len(data) if isinstance(data,list) else "na",
+                    "sample",str(data[:1] if isinstance(data,list) else data)[:650],"cors",cors)
+              except Exception as e: print("CATALOG",params,"ERROR",type(e).__name__,str(e)[:180])
+          try:
+              data,cors=get("/pncp-api/v3/api-docs")
+              paths={k:v for k,v in data.get("paths",{}).items() if "orgaos" in k and "get" in v}
+              print("SWAGGER_ORGAOS",[(k,[p.get("name") for p in v["get"].get("parameters",[])]) for k,v in paths.items()][:12])
+          except Exception as e: print("SWAGGER ERROR",type(e).__name__,str(e)[:180])
           PY
