@@ -77,6 +77,10 @@
       status:filters.status === 'nao-vigente' ? 'nao_vigente' : filters.status,
       pagina:String(page), tam_pagina:String(pageSize)
     });
+    if (filters.uf) query.set('ufs', filters.uf);
+    if (filters.esfera) query.set('esferas', filters.esfera);
+    if (filters.poder) query.set('poderes', filters.poder);
+    if (filters.orgao) query.set('orgaos', filters.orgao);
     return 'https://pncp.gov.br/api/search/?' + query;
   }
 
