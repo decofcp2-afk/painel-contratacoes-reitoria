@@ -8,7 +8,7 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Identify portal organ suggestion source
+      - name: Identify search module and organ options
         run: |
           python3 - <<'PY'
           import urllib.request,urllib.parse,re,time
@@ -16,21 +16,15 @@ jobs:
               req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0","Accept":"*/*"})
               for attempt in range(2):
                   try:
-                      with urllib.request.urlopen(req,timeout=25) as response:return response.read()
+                      with urllib.request.urlopen(req,timeout=25) as response:return response.read().decode("utf-8","replace")
                   except Exception:
                       if attempt:raise
                       time.sleep(.4)
-          html=get("https://pncp.gov.br/app/atas").decode("utf-8","replace")
-          print("BASE",re.findall(r'<base[^>]+>',html)[:2])
-          scripts=re.findall(r'<script[^>]+src="([^"]+)"',html)
-          for src in scripts:
-              if not src.startswith("main."):continue
-              url=urllib.parse.urljoin("https://pncp.gov.br/app/atas",src)
-              try:
-                  body=get(url).decode("utf-8","replace")
-                  print("JS_URL",url,"LENGTH",len(body))
-                  for pattern in [r'api/search',r'orgaos=',r'orgaos/',r'orgao_id',r'orgaos\\?',r'search/orgaos',r'/orgaos']:
-                      matches=list(re.finditer(pattern,body,re.I))
-                      print("PATTERN",pattern,"COUNT",len(matches),"EXCERPTS",[body[max(0,m.start()-100):m.end()+150] for m in matches[:8]])
-              except Exception as e:print("JS_ERROR",type(e).__name__,str(e)[:160])
+          base="https://pncp.gov.br/app/"
+          main=get(base+"main.31898e96dc8bd8d8.js")
+          runtime=get(base+"runtime.57d4d4892b4e9635.js")
+          print("RUNTIME",runtime[:3500])
+          for term in ['path:"atas"','path:"contratacoes"','searchURL','loadChildren']:
+              ms=list(re.finditer(re.escape(term),main))
+              print("MAIN",term,"count",len(ms),"excerpt",[main[max(0,m.start()-240):m.end()+340] for m in ms[:3]])
           PY
