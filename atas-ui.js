@@ -10,6 +10,8 @@
   let visible = 10;
   const openGroups = new Set();
   const DEFAULT_UNIT = '153167';
+  const ALL_UNITS = '*';
+  const allUnits = {codigo:ALL_UNITS, nome:'Todas as UASGs · busca nacional'};
   const API = 'https://dadosabertos.compras.gov.br/modulo-arp/1_consultarARP';
   const REPO_RAW = 'https://raw.githubusercontent.com/decofcp2-afk/painel-contratacoes-reitoria/main/';
   const knownUnits = [
@@ -64,6 +66,7 @@
   }
 
   function displayUnit(unit) {
+    if (unit.codigo === ALL_UNITS) return 'Todas as UASGs';
     return unit.nome === `UASG ${unit.codigo}` ? unit.nome : `${unit.nome} — UASG ${unit.codigo}`;
   }
 
@@ -77,6 +80,14 @@
     const box = $('unit-options');
     box.replaceChildren();
     let previousGroup = '';
+    if (!term) {
+      const all = element('button', 'unit-option', 'Todas as UASGs');
+      all.type = 'button';
+      all.append(element('small', '', 'CPII no painel · todos os órgãos no PNCP'));
+      if (selectedUnit.codigo === ALL_UNITS) all.setAttribute('aria-current', 'true');
+      all.addEventListener('click', () => chooseUnit(allUnits));
+      box.append(all);
+    }
     matches.slice(0, 60).forEach(unit => {
       const group = isCPII(unit) ? 'Colégio Pedro II' : 'Outros órgãos';
       if (group !== previousGroup) box.append(element('div', 'unit-group-title', group));
@@ -125,7 +136,10 @@
     if (currentRequest) currentRequest.abort();
     selectedUnit = unit;
     $('selected-unit').textContent = displayUnit(unit);
-    $('coverage-text').textContent = `Atas gerenciadas pela UASG ${unit.codigo}. Participações e adesões a atas de outros órgãos não estão incluídas. A unidade selecionada no painel não altera esta consulta.`;
+    $('coverage-text').textContent = unit.codigo === ALL_UNITS
+      ? 'Resultados desta página: atas gerenciadas pelas UASGs do Colégio Pedro II. Para consultar atas de qualquer órgão, abra a busca nacional do PNCP com o objeto informado.'
+      : `Atas gerenciadas pela UASG ${unit.codigo}. Participações e adesões a atas de outros órgãos não estão incluídas. A unidade selecionada no painel não altera esta consulta.`;
+    $('national-search').hidden = unit.codigo !== ALL_UNITS;
     $('unit-picker').open = false;
     $('unit-search').value = '';
     renderUnitOptions();
@@ -152,6 +166,8 @@
     const article = element('article', 'ata-row');
     const number = element('div', 'ata-number');
     number.append(element('span', 'cell-label', 'Ata'), element('strong', '', ata.numeroAtaRegistroPreco || 'Sem número'));
+    if (selectedUnit.codigo === ALL_UNITS) number.append(element('small', 'ata-unit',
+      `${ata.nomeUnidadeGerenciadora || 'Unidade do CPII'} · UASG ${ata.codigoUnidadeGerenciadora}`));
     const validity = element('div', 'ata-validity');
     validity.append(element('span', 'cell-label', 'Vigência'),
       element('span', 'date-range', `${formatDate(ata.dataVigenciaInicial)} a ${formatDate(ata.dataVigenciaFinal)}`));
@@ -221,9 +237,23 @@
     $('show-more').hidden = true;
   }
 
+  function updateNationalSearch(f) {
+    const link = $('national-search');
+    const query = new URLSearchParams({pagina:'1', q:f.objeto});
+    if (f.status === 'vigente') query.set('status', 'vigente');
+    else if (f.status === 'nao-vigente') query.set('status', 'nao_vigente');
+    else query.set('status', 'todos');
+    // O PNCP não tem filtro de UASG aqui; mantemos a busca nacional sem restrição.
+    link.href = 'https://pncp.gov.br/app/atas?' + query;
+    link.textContent = f.objeto
+      ? 'Buscar “' + f.objeto + '” em todos os órgãos no PNCP ↗'
+      : 'Buscar em todos os órgãos no PNCP ↗';
+  }
+
   function render() {
     const f = filters();
     renderChips(f);
+    updateNationalSearch(f);
     if (!loaded) return;
     const today = todayInBrazil();
     const result = logic.filterAtas(items, f, today);
@@ -233,7 +263,7 @@
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(ata);
     });
-    $('result-count').textContent = `${result.length} ${result.length === 1 ? 'ata' : 'atas'} em ${groups.size} ${groups.size === 1 ? 'objeto' : 'objetos'}`;
+    $('result-count').textContent = `${result.length} ${result.length === 1 ? 'ata' : 'atas'}${selectedUnit.codigo === ALL_UNITS ? ' do CPII' : ''} em ${groups.size} ${groups.size === 1 ? 'objeto' : 'objetos'}`;
     if (!result.length) {
       empty('Tente mudar o status, usar menos palavras ou limpar os filtros.', 'Nenhuma ata encontrada');
       return;
@@ -288,10 +318,23 @@
     }
     if (!response.ok) throw new Error('Base dos campi indisponível');
     const payload = await response.json();
-    if (!payload.generatedAt || !Array.isArray(payload.items) || !payload.units?.includes(code)) {
+    if (!payload.generatedAt || !Array.isArray(payload.items) || (code !== ALL_UNITS && !payload.units?.includes(code))) {
       throw new Error('A unidade ainda não está na base atualizada do CPII');
     }
-    return {items:payload.items.filter(ata => String(ata.codigoUnidadeGerenciadora) === code), generatedAt:payload.generatedAt, cached:true};
+    return {items:payload.items.filter(ata => code === ALL_UNITS || String(ata.codigoUnidadeGerenciadora) === code), generatedAt:payload.generatedAt, cached:true};
+  }
+
+  async function loadAllCPII(signal) {
+    const [reitoria, campi] = await Promise.all([loadDefault(signal), loadCPII(ALL_UNITS, signal)]);
+    const unique = new Map();
+    [...reitoria.items, ...campi.items].forEach(ata => {
+      const key = ata.numeroControlePncpAta ||
+        [ata.codigoUnidadeGerenciadora, ata.numeroAtaRegistroPreco, ata.numeroCompra, ata.anoCompra].join('|');
+      unique.set(key, ata);
+    });
+    return {items:[...unique.values()],
+      generatedAt:new Date(Math.min(Date.parse(reitoria.generatedAt), Date.parse(campi.generatedAt))).toISOString(),
+      cached:true};
   }
 
   async function loadFromCompras(code, signal) {
@@ -329,13 +372,14 @@
     currentRequest = request;
     loaded = false;
     items = [];
-    $('result-count').textContent = `Consultando UASG ${unit.codigo}…`;
+    $('result-count').textContent = unit.codigo === ALL_UNITS ? 'Consultando UASGs do CPII…' : `Consultando UASG ${unit.codigo}…`;
     $('updated-at').textContent = '';
     empty('Buscando atas da unidade selecionada…');
     const timeout = setTimeout(() => request.abort(), 90000);
     try {
       const payload = unitCache.get(unit.codigo) ||
-        (unit.codigo === DEFAULT_UNIT ? await loadDefault(request.signal) :
+        (unit.codigo === ALL_UNITS ? await loadAllCPII(request.signal) :
+          unit.codigo === DEFAULT_UNIT ? await loadDefault(request.signal) :
           isCPII(unit) ? await loadCPII(unit.codigo, request.signal) :
             await loadFromCompras(unit.codigo, request.signal));
       if (currentRequest !== request) return;
@@ -352,7 +396,9 @@
     } catch {
       if (currentRequest !== request) return;
       $('result-count').textContent = 'Consulta indisponível';
-      empty(isCPII(unit)
+      empty(unit.codigo === ALL_UNITS
+        ? 'Não foi possível carregar todas as unidades do CPII agora. Você ainda pode buscar o objeto em todos os órgãos no PNCP.'
+        : isCPII(unit)
         ? 'Não foi possível carregar as atas deste campus agora. Selecione outra unidade ou tente novamente.'
         : 'A API pública bloqueou a consulta direta desta UASG. No PNCP, pesquise pelo objeto e selecione o órgão ou a unidade.',
       'Consulta temporariamente indisponível');
@@ -364,6 +410,7 @@
       const query = new URLSearchParams({pagina:'1', q:filters().objeto});
       if (filters().status === 'vigente') query.set('status', 'vigente');
       if (filters().status === 'todos') query.set('status', 'todos');
+      if (filters().status === 'nao-vigente') query.set('status', 'nao_vigente');
       source.href = 'https://pncp.gov.br/app/atas?' + query;
       source.target = '_blank';
       source.rel = 'noopener noreferrer';
