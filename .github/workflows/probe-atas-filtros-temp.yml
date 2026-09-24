@@ -1,0 +1,35 @@
+name: Probe PNCP filters (temporary)
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify national search filters
+        run: |
+          python3 - <<'PY'
+          import urllib.parse, urllib.request, json
+          base = {"tipos_documento":"ata","q":"computador","status":"todos","pagina":"1","tam_pagina":"5"}
+          variants = [{}, {"ufs":"RJ"}, {"esferas":"F"}, {"poderes":"L"}, {"orgaos":"38114"}]
+          for extra in variants:
+              params = {**base, **extra}
+              req = urllib.request.Request("https://pncp.gov.br/api/search/?" + urllib.parse.urlencode(params),
+                  headers={"Origin":"https://decofcp2-afk.github.io","User-Agent":"Mozilla/5.0","Accept":"application/json"})
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as response:
+                      data = json.load(response)
+                      print("FILTER",extra,"total",data.get("total"),"cors",response.headers.get("Access-Control-Allow-Origin"),
+                        "items",[(x.get("orgao_id"),x.get("orgao_nome"),x.get("uf"),x.get("esfera_id"),x.get("poder_id")) for x in data.get("items",[])])
+              except Exception as error: print("FILTER",extra,"ERROR",type(error).__name__,str(error)[:200])
+          for path in ["/api/pncp/v1/orgaos?pagina=1","/pncp-api/v1/orgaos?pagina=1"]:
+              req = urllib.request.Request("https://pncp.gov.br" + path,
+                headers={"Origin":"https://decofcp2-afk.github.io","User-Agent":"Mozilla/5.0","Accept":"application/json"})
+              try:
+                  with urllib.request.urlopen(req, timeout=12) as response:
+                      print("CATALOG",path,response.status,response.headers.get("Access-Control-Allow-Origin"),
+                        response.read(250).decode("utf-8","replace"))
+              except Exception as error: print("CATALOG",path,"ERROR",type(error).__name__,str(error)[:200])
+          PY
