@@ -8,36 +8,31 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify query filters and organ catalog
+      - name: Inspect organ identifiers
         run: |
           python3 - <<'PY'
-          import urllib.parse, urllib.request, json, time
-          def get(path,params=None):
-              url="https://pncp.gov.br"+path+("?" + urllib.parse.urlencode(params) if params else "")
+          import urllib.parse,urllib.request,json,time,re
+          def get(url):
               req=urllib.request.Request(url,headers={"Origin":"https://decofcp2-afk.github.io","User-Agent":"Mozilla/5.0","Accept":"application/json"})
-              for attempt in range(3):
+              for attempt in range(2):
                   try:
-                      with urllib.request.urlopen(req,timeout=20) as resp: return json.load(resp),resp.headers.get("Access-Control-Allow-Origin")
-                  except Exception as e:
-                      if attempt==2: raise
+                      with urllib.request.urlopen(req,timeout=15) as resp: return resp.read()
+                  except Exception:
+                      if attempt: raise
                       time.sleep(.6)
-          base={"tipos_documento":"ata","q":"computador","status":"todos","pagina":"1","tam_pagina":"5"}
-          for extra in [{},{"ufs":"RJ"},{"esferas":"F"},{"poderes":"L"},{"orgaos":"38114"}]:
-              try:
-                  data,cors=get("/api/search/",{**base,**extra})
-                  print("FILTER",extra,"total",data.get("total"),"cors",cors,
-                    "items",[(x.get("orgao_id"),x.get("uf"),x.get("esfera_id"),x.get("poder_id")) for x in data.get("items",[])])
-              except Exception as e: print("FILTER",extra,"ERROR",type(e).__name__,str(e)[:180])
-          for params in [{"pagina":"1"},{"razaoSocial":"COLEGIO PEDRO II","pagina":"1"},
-                         {"nome":"COLEGIO PEDRO II","pagina":"1"},{"cnpj":"42414284000102","pagina":"1"}]:
-              try:
-                  data,cors=get("/api/pncp/v1/orgaos",params)
-                  print("CATALOG",params,"type",type(data).__name__,"length",len(data) if isinstance(data,list) else "na",
-                    "sample",str(data[:1] if isinstance(data,list) else data)[:650],"cors",cors)
-              except Exception as e: print("CATALOG",params,"ERROR",type(e).__name__,str(e)[:180])
           try:
-              data,cors=get("/pncp-api/v3/api-docs")
-              paths={k:v for k,v in data.get("paths",{}).items() if "orgaos" in k and "get" in v}
-              print("SWAGGER_ORGAOS",[(k,[p.get("name") for p in v["get"].get("parameters",[])]) for k,v in paths.items()][:12])
-          except Exception as e: print("SWAGGER ERROR",type(e).__name__,str(e)[:180])
+              catalog=json.loads(get("https://pncp.gov.br/api/pncp/v1/orgaos"))
+              print("CATALOG_KEYS",list(catalog[0]),"CPII",[x for x in catalog if x.get("cnpj")=="42414284000102"][:1])
+          except Exception as e:print("CATALOG_ERROR",str(e)[:200])
+          base="https://pncp.gov.br/api/search/?"
+          for params in [{"tipos_documento":"ata","q":"COLEGIO PEDRO II","status":"todos","pagina":"1","tam_pagina":"20"},
+                         {"tipos_documento":"ata","q":"","status":"todos","pagina":"1","tam_pagina":"2","orgaos":"42414284000102"}]:
+              try:
+                  result=json.loads(get(base+urllib.parse.urlencode(params)))
+                  print("SEARCH",params,"total",result.get("total"),"orgs",[(x.get("orgao_id"),x.get("orgao_nome"),x.get("orgao_cnpj")) for x in result.get("items",[])[:8]])
+              except Exception as e:print("SEARCH_ERROR",params,str(e)[:160])
+          try:
+              html=get("https://pncp.gov.br/app/atas").decode("utf-8","replace")
+              print("SCRIPTS",re.findall(r'<script[^>]+src="([^"]+)"',html)[:15])
+          except Exception as e:print("HTML_ERROR",str(e)[:160])
           PY
