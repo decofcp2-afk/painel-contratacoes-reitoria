@@ -8,7 +8,7 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Identify PNCP organ options
+      - name: Locate PNCP organ autocomplete service
         run: |
           python3 - <<'PY'
           import urllib.request,re,time
@@ -17,19 +17,16 @@ jobs:
               for attempt in range(3):
                   try:
                       with urllib.request.urlopen(req,timeout=35) as response:return response.read().decode("utf-8","replace")
-                  except Exception as ex:
+                  except Exception:
                       if attempt==2: raise
                       time.sleep(1)
           base="https://pncp.gov.br/app/"
-          main=get(base+"main.31898e96dc8bd8d8.js")
-          point=main.find('path:"atas"')
-          print("ROUTE",main[point:point+1150])
-          files={"search":"src_app_pages_search_search_module_ts.b917591f0fcfb4cd.js","common":"common.e671a4bb8090c6ed.js","results":"default-src_app_result-panel_result-panel_module_ts-src_app_result-panel_results-panel_result-66757b.55c721c4512fa7e4.js"}
+          files={"consultas":"src_app_pages_consultas_consultas_module_ts.4614021a053b4f3f.js","shared":"default-src_app_shared_breadcrumbs_breadcrumbs_component_ts-src_app_shared_table_table_component_ts.106e8693e52fd6fd.js","dsgov":"default-src_app_components_dsgov_alerta_alerta_component_ts-node_modules_lodash_lodash_js.0797e97390316fb7.js","main":"main.31898e96dc8bd8d8.js"}
           for name,file in files.items():
               s=get(base+file)
               print("FILE",name,len(s))
-              for term in ["orgaos","orgao","searchURL","tipoOrgan","/api/search"]:
-                  matches=list(re.finditer(term,s,re.I))
-                  print("TERM",name,term,len(matches))
-                  for m in matches[:5]:print("SNIP",name,term,s[max(0,m.start()-260):m.start()+380][:640])
+              for term in ["orgaos","orgao_id","/api/search","searchURL","filter_options","options","facets","agregacoes"]:
+                  ms=list(re.finditer(term,s,re.I))
+                  print("TERM",name,term,len(ms))
+                  for m in ms[:8]:print("SNIP",name,term,s[max(0,m.start()-240):m.start()+360][:600])
           PY
