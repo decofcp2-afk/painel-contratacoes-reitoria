@@ -40,38 +40,36 @@
     return node;
   }
 
-  function addDetail(parent, label, value) {
-    const div = element('div');
-    div.append(element('dt', '', label), element('dd', '', value || 'Não informado'));
-    parent.append(div);
-  }
-
-  function addLink(parent, urlValue, label) {
+  function addLink(parent, urlValue, number) {
     const url = safePNCP(urlValue);
     if (!url) {
-      parent.append(element('span', 'missing-link', `${label} indisponível no PNCP`));
+      parent.append(element('span', 'missing-link', 'Documentos indisponíveis no PNCP'));
       return;
     }
-    const a = element('a', '', `${label} ↗`);
+    const a = element('a', 'document-link', 'Ver ata e documentos ↗');
     a.href = url;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
+    a.setAttribute('aria-label', `Ver ata ${number || 'sem número'} e documentos no PNCP`);
     parent.append(a);
   }
 
   function card(ata, today) {
-    const article = element('article', 'ata-card');
-    const top = element('div', 'card-top');
-    const title = element('strong', 'card-identity', `Ata ${ata.numeroAtaRegistroPreco || 'sem número'}`);
+    const article = element('article', 'ata-row');
+    const number = element('div', 'ata-number');
+    number.append(element('span', 'cell-label', 'Ata'), element('strong', '', ata.numeroAtaRegistroPreco || 'Sem número'));
+    const validity = element('div', 'ata-validity');
+    validity.append(element('span', 'cell-label', 'Vigência'),
+      element('span', 'date-range', `${formatDate(ata.dataVigenciaInicial)} a ${formatDate(ata.dataVigenciaFinal)}`));
     const status = logic.situation(ata, today);
-    top.append(title, element('span', `badge ${status}`, statusLabels[status]));
-    const details = element('dl', 'card-details');
-    addDetail(details, 'COMPRA', [ata.numeroCompra, ata.anoCompra].filter(Boolean).join('/'));
-    addDetail(details, 'VIGÊNCIA', `${formatDate(ata.dataVigenciaInicial)} a ${formatDate(ata.dataVigenciaFinal)}`);
-    const links = element('div', 'card-links');
-    addLink(links, ata.linkAtaPNCP, 'Ver ata e documentos');
-    addLink(links, ata.linkCompraPNCP, 'Ver compra');
-    article.append(top, details, links);
+    validity.append(element('span', `badge ${status}`, statusLabels[status]));
+    const purchase = element('div', 'ata-purchase');
+    purchase.append(element('span', 'cell-label', 'Compra'),
+      element('span', '', [ata.numeroCompra, ata.anoCompra].filter(Boolean).join('/') || 'Não informada'));
+    const links = element('div', 'ata-action');
+    links.append(element('span', 'cell-label', 'Documentos'));
+    addLink(links, ata.linkAtaPNCP, ata.numeroAtaRegistroPreco);
+    article.append(number, validity, purchase, links);
     return article;
   }
 
@@ -83,14 +81,19 @@
       else openGroups.delete(key);
     });
     const description = String(value || 'Objeto não informado').replace(/\s+/g, ' ').trim();
+    const title = description.replace(/^A presente Ata tem por objeto o registro de preços para (?:a eventual )?/i, '');
     const summary = element('summary', 'object-heading');
-    summary.append(element('span', 'object-title', description),
-      element('span', 'object-count', `${records.length} ${records.length === 1 ? 'ata' : 'atas'} deste objeto`));
+    summary.append(element('span', 'object-title', title),
+      element('span', 'object-count', `${records.length} ${records.length === 1 ? 'ata' : 'atas'}`));
     heading.append(summary);
-    if (description.length > 230) {
+    if (title !== description || description.length > 230) {
       heading.append(element('p', 'object-full', description));
     }
     const rows = element('div', 'object-rows');
+    const header = element('div', 'row-head');
+    header.setAttribute('aria-hidden', 'true');
+    ['Ata', 'Vigência', 'Compra', 'Documentos'].forEach(label => header.append(element('span', '', label)));
+    rows.append(header);
     records.forEach(ata => rows.append(card(ata, today)));
     heading.append(rows);
     return heading;
@@ -143,8 +146,8 @@
     }
     const output = document.createDocumentFragment();
     const expand = Boolean(f.objeto || f.numero || f.ano || f.compra) || groups.size <= 3;
-    [...groups].slice(0, visible).forEach(([key, records]) => {
-      output.append(objectGroup(key, records[0].objeto, records, today, expand));
+    [...groups].slice(0, visible).forEach(([key, records], index) => {
+      output.append(objectGroup(key, records[0].objeto, records, today, expand || index === 0));
     });
     $('result-list').replaceChildren(output);
     $('show-more').hidden = groups.size <= visible;
