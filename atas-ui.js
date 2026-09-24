@@ -277,6 +277,23 @@
     return {items:payload.items.filter(ata => ata && String(ata.codigoUnidadeGerenciadora) === DEFAULT_UNIT), generatedAt:payload.generatedAt, cached:true};
   }
 
+  async function loadCPII(code, signal) {
+    let response;
+    try {
+      response = await fetch(REPO_RAW + 'atas-cpii-data.json', {cache:'no-cache', signal});
+      if (!response.ok) throw new Error('Base do CPII indisponível');
+    } catch (error) {
+      if (signal.aborted) throw error;
+      response = await fetch('atas-cpii-data.json', {cache:'no-cache', signal});
+    }
+    if (!response.ok) throw new Error('Base dos campi indisponível');
+    const payload = await response.json();
+    if (!payload.generatedAt || !Array.isArray(payload.items) || !payload.units?.includes(code)) {
+      throw new Error('A unidade ainda não está na base atualizada do CPII');
+    }
+    return {items:payload.items.filter(ata => String(ata.codigoUnidadeGerenciadora) === code), generatedAt:payload.generatedAt, cached:true};
+  }
+
   async function loadFromCompras(code, signal) {
     const years = Array.from({length:new Date().getFullYear() - 2021 + 1}, (_, index) => 2021 + index);
     const batches = await Promise.all(years.map(async year => {
@@ -314,7 +331,9 @@
     const timeout = setTimeout(() => request.abort(), 90000);
     try {
       const payload = unitCache.get(unit.codigo) ||
-        (unit.codigo === DEFAULT_UNIT ? await loadDefault(request.signal) : await loadFromCompras(unit.codigo, request.signal));
+        (unit.codigo === DEFAULT_UNIT ? await loadDefault(request.signal) :
+          isCPII(unit) ? await loadCPII(unit.codigo, request.signal) :
+            await loadFromCompras(unit.codigo, request.signal));
       if (currentRequest !== request) return;
       unitCache.set(unit.codigo, payload);
       if (unitCache.size > 4) unitCache.delete(unitCache.keys().next().value);
@@ -329,11 +348,22 @@
     } catch {
       if (currentRequest !== request) return;
       $('result-count').textContent = 'Consulta indisponível';
-      empty('Não foi possível consultar esta UASG no Compras.gov.br agora. Selecione outra unidade ou tente novamente mais tarde.', 'Consulta temporariamente indisponível');
+      empty(isCPII(unit)
+        ? 'Não foi possível carregar as atas deste campus agora. Selecione outra unidade ou tente novamente.'
+        : 'A API pública bloqueou a consulta direta desta UASG. No PNCP, pesquise pelo objeto e selecione o órgão ou a unidade.',
+      'Consulta temporariamente indisponível');
       const retry = element('button', 'show-more', 'Tentar novamente');
       retry.type = 'button';
       retry.addEventListener('click', load);
       $('result-list').append(retry);
+      const source = element('a', 'source-fallback', 'Consultar atas no PNCP ↗');
+      const query = new URLSearchParams({pagina:'1', q:filters().objeto});
+      if (filters().status === 'vigente') query.set('status', 'vigente');
+      if (filters().status === 'todos') query.set('status', 'todos');
+      source.href = 'https://pncp.gov.br/app/atas?' + query;
+      source.target = '_blank';
+      source.rel = 'noopener noreferrer';
+      $('result-list').append(source);
     } finally {
       clearTimeout(timeout);
     }
