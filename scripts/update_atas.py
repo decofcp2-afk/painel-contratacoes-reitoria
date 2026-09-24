@@ -33,12 +33,12 @@ def fetch_page(params):
             time.sleep(2 ** attempt)
 
 
-def collect(fetch=fetch_page, now=None):
+def collect(fetch=fetch_page, now=None, uasg=UASG):
     now = now or dt.datetime.now(dt.timezone.utc)
     records = {}
     for year in range(2021, now.year + 1):
         params = {
-            "codigoUnidadeGerenciadora": UASG,
+            "codigoUnidadeGerenciadora": uasg,
             "dataVigenciaInicialMin": f"{year}-01-01",
             "dataVigenciaInicialMax": f"{year}-12-31",
             "tamanhoPagina": 500,
@@ -52,14 +52,14 @@ def collect(fetch=fetch_page, now=None):
             if not isinstance(pages, int) or pages < 0 or pages > 200:
                 raise ValueError(f"Paginação inesperada no ano {year}: {pages}")
             for item in response["resultado"]:
-                if not isinstance(item, dict) or str(item.get("codigoUnidadeGerenciadora")) != str(UASG):
+                if not isinstance(item, dict) or str(item.get("codigoUnidadeGerenciadora")) != str(uasg):
                     raise ValueError(f"Registro com UASG incorreta no ano {year}")
                 record = {field: item.get(field) for field in FIELDS}
                 key = item.get("numeroControlePncpAta") or (
                     item.get("numeroAtaRegistroPreco"), item.get("numeroCompra"),
                     item.get("anoCompra"), item.get("codigoUnidadeGerenciadora"),
                 )
-                if not key or key == (None, None, None, UASG):
+                if not key or key == (None, None, None, uasg):
                     raise ValueError("Ata sem identificador para deduplicação")
                 records[str(key)] = record
             if page >= pages:
@@ -69,7 +69,7 @@ def collect(fetch=fetch_page, now=None):
         raise ValueError("A API não retornou atas; arquivo anterior preservado")
     return {
         "source": ENDPOINT,
-        "scope": "Atas gerenciadas pela UASG 153167 — Colégio Pedro II",
+        "scope": f"Atas gerenciadas pela UASG {uasg} — Colégio Pedro II",
         "generatedAt": now.isoformat(timespec="seconds").replace("+00:00", "Z"),
         "items": sorted(records.values(), key=lambda r: (str(r.get("objeto") or "").casefold(), str(r.get("numeroAtaRegistroPreco") or ""))),
     }

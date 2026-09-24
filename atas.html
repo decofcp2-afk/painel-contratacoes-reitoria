@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; base-uri 'self'; object-src 'none'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com https://dadosabertos.compras.gov.br; base-uri 'self'; object-src 'none'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="theme-color" content="#0b1f3d">
-  <meta name="description" content="Consulte atas de registro de preços gerenciadas pelo Colégio Pedro II, com busca por objeto e links para o PNCP.">
+  <meta name="description" content="Consulte atas de registro de preços por UASG, objeto e vigência, com acesso aos documentos no PNCP.">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="atas.css">
   <title>Consulta de atas | Colégio Pedro II</title>
@@ -27,7 +27,18 @@
     <section class="intro" aria-labelledby="page-title">
       <h1 id="page-title">Atas de registro de preços</h1>
       <p class="intro-copy">Encontre atas pelo objeto, confira a vigência e acesse os documentos oficiais no PNCP.</p>
-      <p class="scope-line">Colégio Pedro II <span aria-hidden="true">·</span> UASG 153167 <span aria-hidden="true">·</span> Gerenciadora</p>
+      <div class="scope-selector">
+        <span class="scope-label">Atas gerenciadas por</span>
+        <details id="unit-picker" class="unit-picker">
+          <summary><span id="selected-unit">Colégio Pedro II · Reitoria — UASG 153167</span><span aria-hidden="true">⌄</span></summary>
+          <div class="unit-menu">
+            <label for="unit-search">Buscar órgão ou UASG pelo nome ou número</label>
+            <input id="unit-search" type="search" placeholder="Ex.: Niterói, universidade ou 155625" autocomplete="off">
+            <div id="unit-options" class="unit-options" role="group" aria-label="Unidades disponíveis"></div>
+            <p id="unit-help" class="unit-help"></p>
+          </div>
+        </details>
+      </div>
     </section>
     <section class="search-panel" aria-label="Filtros da consulta de atas">
       <div class="primary-filters">
@@ -53,7 +64,7 @@
     </section>
     <section class="results" aria-labelledby="results-title">
       <div class="results-heading"><h2 id="results-title"><span id="result-count" role="status" aria-live="polite">Carregando atas…</span></h2><p id="updated-at" class="updated-at"></p></div>
-      <aside class="coverage-note"><span class="info-icon" aria-hidden="true">i</span><p>Esta consulta mostra apenas atas gerenciadas pelo Colégio Pedro II. Participações e adesões a atas de outros órgãos ainda não estão incluídas. A unidade selecionada no painel não altera este escopo.</p></aside>
+      <aside class="coverage-note"><span class="info-icon" aria-hidden="true">i</span><p id="coverage-text">Atas gerenciadas pela UASG selecionada. Participações e adesões a atas de outros órgãos não estão incluídas. A unidade selecionada no painel não altera esta consulta.</p></aside>
       <div id="result-list" class="result-list"><div class="empty-state">Carregando atas…</div></div>
       <button id="show-more" class="show-more" type="button" hidden>Mostrar mais atas</button>
     </section>
