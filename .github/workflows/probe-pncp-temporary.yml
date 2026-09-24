@@ -1,0 +1,30 @@
+name: Probe PNCP search (temporary)
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check national search and CORS
+        run: |
+          python3 - <<'PY'
+          import urllib.parse, urllib.request, urllib.error, json
+          base = "https://pncp.gov.br/api/search/"
+          queries = [
+            {"tipos_documento":"ata","q":"computador","pag":"1","tam_pagina":"2"},
+            {"tipos_documento":"ata","termo":"computador","pag":"1","tam_pagina":"2"},
+            {"tipos_documento":"ata","q":"computador","pagina":"1","tam_pagina":"2"},
+          ]
+          for params in queries:
+              url = base + "?" + urllib.parse.urlencode(params)
+              req = urllib.request.Request(url, headers={"Origin":"https://decofcp2-afk.github.io","User-Agent":"Mozilla/5.0","Accept":"application/json"})
+              try:
+                  with urllib.request.urlopen(req, timeout=12) as response:
+                      body = response.read(1200).decode("utf-8","replace")
+                      print(url, "status", response.status, "cors", response.headers.get("Access-Control-Allow-Origin"), "body", body[:800])
+              except Exception as error:
+                  print(url, type(error).__name__, str(error)[:200])
+          PY
