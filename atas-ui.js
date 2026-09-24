@@ -70,8 +70,8 @@
   function renderUnitOptions() {
     const term = logic.normalize($('unit-search').value);
     const words = term.split(/\s+/).filter(Boolean);
-    const matches = units.filter(unit => words.every(word =>
-      logic.normalize([unit.nome, unit.nomeOrgao, unit.codigo].join(' ')).includes(word)));
+    const matches = units.filter(unit => (!term ? isCPII(unit) : words.every(word =>
+      logic.normalize([unit.nome, unit.nomeOrgao, unit.codigo].join(' ')).includes(word))));
     matches.sort((a, b) => Number(isCPII(b)) - Number(isCPII(a)) ||
       logic.normalize(a.nome).localeCompare(logic.normalize(b.nome), 'pt-BR'));
     const box = $('unit-options');
@@ -320,6 +320,7 @@
       if (unitCache.size > 4) unitCache.delete(unitCache.keys().next().value);
       items = payload.items;
       loadYears();
+      renderChips(filters());
       const stamp = new Intl.DateTimeFormat('pt-BR', {timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(payload.generatedAt));
       const delayed = Date.now() - new Date(payload.generatedAt).valueOf() > 48 * 60 * 60 * 1000;
       $('updated-at').textContent = `${payload.cached ? 'Dados atualizados' : 'Consulta realizada'} em ${stamp} (horário de Brasília)${delayed ? ' · Confira a ata no PNCP' : ''}`;
