@@ -129,6 +129,7 @@ h1 { margin: 0 0 6px; color: var(--navy); font-size: clamp(29px, 3.5vw, 38px); l
 .show-more { display: block; margin: 20px auto 0; padding: 10px 18px; border: 1px solid var(--blue); border-radius: 7px; color: var(--blue); background: #fff; font-weight: 700; }
 .show-more:hover { background: #eaf2fd; }
 .show-more[hidden] { display: none; }
+.source-fallback { justify-self: center; margin-top: -2px; color: var(--blue); font-size: 12px; font-weight: 700; text-underline-offset: 3px; }
 .page-footer { margin: 32px 0 26px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.5; }
 
 @media (max-width: 900px) {
