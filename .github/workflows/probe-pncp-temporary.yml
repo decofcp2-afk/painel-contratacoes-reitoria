@@ -13,11 +13,8 @@ jobs:
           python3 - <<'PY'
           import urllib.parse, urllib.request, json
           queries = [
-            {"tipos_documento":"ata","q":"computador","pagina":"1","tam_pagina":"2","status":"todos"},
-            {"tipos_documento":"ata","q":"computador","pagina":"2","tam_pagina":"2","status":"todos"},
-            {"tipos_documento":"ata","q":"computador","pag":"2","tam_pagina":"2","status":"todos"},
-            {"tipos_documento":"ata","q":"computador","pagina":"1","tam_pagina":"2","status":"vigente"},
-            {"tipos_documento":"ata","q":"computador","pagina":"2","tam_pagina":"2","status":"vigente"},
+            {"tipos_documento":"ata","q":"computador","pagina":"1","tam_pagina":"20","status":"todos"},
+            {"tipos_documento":"ata","q":"computador","pagina":"2","tam_pagina":"20","status":"todos"},
           ]
           for params in queries:
               url = "https://pncp.gov.br/api/search/?" + urllib.parse.urlencode(params)
@@ -28,7 +25,7 @@ jobs:
                       items = result.get("items",[])
                       print("QUERY",params,"cors",response.headers.get("Access-Control-Allow-Origin"),
                           "meta",{key:val for key,val in result.items() if key!="items"},
-                          "first_id",items[0].get("id") if items else None)
+                          "length",len(items),"first_id",items[0].get("id") if items else None)
                       if items:
                           print("ITEM",json.dumps(items[0],ensure_ascii=False)[:4500])
               except Exception as error:
