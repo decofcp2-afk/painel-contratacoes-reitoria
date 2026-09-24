@@ -8,7 +8,7 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Locate PNCP organ autocomplete service
+      - name: Identify search filter endpoints
         run: |
           python3 - <<'PY'
           import urllib.request,re,time
@@ -21,12 +21,10 @@ jobs:
                       if attempt==2: raise
                       time.sleep(1)
           base="https://pncp.gov.br/app/"
-          files={"consultas":"src_app_pages_consultas_consultas_module_ts.4614021a053b4f3f.js","shared":"default-src_app_shared_breadcrumbs_breadcrumbs_component_ts-src_app_shared_table_table_component_ts.106e8693e52fd6fd.js","dsgov":"default-src_app_components_dsgov_alerta_alerta_component_ts-node_modules_lodash_lodash_js.0797e97390316fb7.js","main":"main.31898e96dc8bd8d8.js"}
-          for name,file in files.items():
-              s=get(base+file)
-              print("FILE",name,len(s))
-              for term in ["orgaos","orgao_id","/api/search","searchURL","filter_options","options","facets","agregacoes"]:
-                  ms=list(re.finditer(term,s,re.I))
-                  print("TERM",name,term,len(ms))
-                  for m in ms[:8]:print("SNIP",name,term,s[max(0,m.start()-240):m.start()+360][:600])
+          s=get(base+"main.31898e96dc8bd8d8.js")
+          print("SIZE",len(s))
+          for term in ["orgaos", "orgao_id","searchURL","/filters","facets","/filtros","esferas","api/search"]:
+              ms=list(re.finditer(term,s,re.I))
+              print("TERM",term,len(ms))
+              for m in ms[:25]:print("SNIP",term,s[max(0,m.start()-130):m.start()+200][:330])
           PY
