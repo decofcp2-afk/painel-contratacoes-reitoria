@@ -154,8 +154,12 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .brand-title{font-size:14px;font-weight:600;color:var(--text2);letter-spacing:.3px;line-height:1.2}
 .brand-chip{background:rgba(201,162,42,.15);color:var(--cpii-gold);border:1px solid rgba(201,162,42,.35);font-family:var(--mono);font-size:13px;font-weight:700;padding:4px 10px;border-radius:3px;letter-spacing:1.5px;margin-left:3px}
 .top-right{display:flex;align-items:center;gap:8px}
-.desktop-quick-links{display:flex;align-items:center;gap:8px;white-space:nowrap}
-.desktop-quick-links .top-meta{min-height:28px;cursor:pointer}
+.desktop-quick-links{display:flex;align-items:center;gap:7px;white-space:nowrap;padding:4px 6px;border:1px solid rgba(255,255,255,.28);border-radius:11px;background:rgba(11,31,61,.08)}
+.desktop-quick-links .top-meta{min-height:35px;padding:7px 11px;border:1px solid rgba(255,255,255,.66);border-radius:7px;background:rgba(255,255,255,.64);color:var(--cpii-navy);font-family:var(--sans);font-size:12px;letter-spacing:.1px;cursor:pointer;transition:background .18s ease,box-shadow .18s ease,transform .18s ease}
+.desktop-quick-links .top-meta:hover{background:rgba(255,255,255,.88);box-shadow:0 3px 9px rgba(11,31,61,.14);transform:translateY(-1px)}
+.desktop-quick-links .top-meta:active{transform:translateY(0)}
+.quick-links-divider{height:22px;width:1px;background:rgba(255,255,255,.55);margin:0 4px}
+.desktop-quick-links .atas-shortcut{box-shadow:inset 0 -2px 0 rgba(201,162,42,.72)}
 .desktop-portarias{position:relative}
 .desktop-portarias summary{list-style:none}
 .desktop-portarias summary::-webkit-details-marker{display:none}
@@ -163,7 +167,8 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .desktop-portarias-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:195px;padding:6px;background:#fff;border:1px solid rgba(11,29,51,.12);border-radius:9px;box-shadow:0 14px 40px rgba(8,18,33,.28);z-index:310}
 .desktop-portarias-menu a{display:block;padding:10px 12px;border-radius:6px;color:var(--cpii-navy);font:600 13px var(--sans);text-decoration:none}
 .desktop-portarias-menu a:hover,.desktop-portarias-menu a:focus-visible{background:rgba(30,78,140,.08)}
-.desktop-quick-links .acesso-restrito-desktop{margin-left:10px;border-color:rgba(201,162,42,.6)}
+.desktop-quick-links .acesso-restrito-desktop{background:rgba(11,31,61,.47);border-color:rgba(255,255,255,.66);color:#fff}
+.desktop-quick-links .acesso-restrito-desktop:hover{background:rgba(11,31,61,.66)}
 .links-uteis-wrap{display:none}
 @media (max-width:1200px){
   .desktop-quick-links{display:none}
@@ -172,7 +177,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 }
 .top-meta{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--cpii-navy);background:rgba(201,162,42,.15);border:1px solid rgba(201,162,42,.35);padding:2px 7px;border-radius:3px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;transition:background .2s,border-color .2s}
 .top-meta:hover{background:rgba(201,162,42,.3);border-color:var(--cpii-gold)}
-.desktop-quick-links .top-meta,.desktop-quick-links .top-meta:hover{background:transparent}
+
 .btn-refresh{background:rgba(255,255,255,.15);border:1px solid rgba(201,162,42,.4);color:var(--cpii-gold);font-family:var(--mono);font-size:12px;font-weight:700;padding:4px 10px;border-radius:10px;cursor:pointer;letter-spacing:1px;transition:all .2s}
 .btn-refresh:hover{background:rgba(201,162,42,.2);border-color:var(--cpii-gold)}
 .btn-refresh:disabled{opacity:.5;cursor:default}
@@ -905,7 +910,8 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
       </details>
       <a class="top-meta" href="https://decofcp2-afk.github.io/proad-fluxos/" target="_blank" rel="noopener">🔗 Fluxos PROAD</a>
       <a class="top-meta" href="https://portalespiral.cp2.g12.br/index.php/materialinstitucional/article/view/4903/2825" target="_blank" rel="noopener">📋 POP</a>
-      <a class="top-meta" href="atas.html">📚 Atas</a>
+      <a class="top-meta atas-shortcut" href="atas.html">📚 Atas</a>
+      <span class="quick-links-divider" aria-hidden="true"></span>
       <a class="top-meta acesso-restrito-desktop" href="https://decofcp2-afk.github.io/app_gestao-reitoria/" target="_blank" rel="noopener">🔒 Acesso Restrito</a>
     </nav>
     <div class="links-uteis-wrap">
