@@ -12,6 +12,10 @@
   const DEFAULT_UNIT = '153167';
   const ALL_UNITS = '*';
   const allUnits = {codigo:ALL_UNITS, nome:'Todas as UASGs · busca nacional'};
+  const PAGE_SIZE = 20;
+  let nationalPage = 1;
+  let nationalTotal = 0;
+  let nationalTimer;
   const API = 'https://dadosabertos.compras.gov.br/modulo-arp/1_consultarARP';
   const REPO_RAW = 'https://raw.githubusercontent.com/decofcp2-afk/painel-contratacoes-reitoria/main/';
   const knownUnits = [
@@ -83,7 +87,7 @@
     if (!term) {
       const all = element('button', 'unit-option', 'Todas as UASGs');
       all.type = 'button';
-      all.append(element('small', '', 'CPII no painel · todos os órgãos no PNCP'));
+      all.append(element('small', '', 'Busca nacional por objeto neste painel'));
       if (selectedUnit.codigo === ALL_UNITS) all.setAttribute('aria-current', 'true');
       all.addEventListener('click', () => chooseUnit(allUnits));
       box.append(all);
@@ -133,13 +137,17 @@
 
   function chooseUnit(unit) {
     if (selectedUnit.codigo === unit.codigo) { $('unit-picker').open = false; return; }
+    clearTimeout(nationalTimer);
     if (currentRequest) currentRequest.abort();
     selectedUnit = unit;
+    nationalPage = 1;
+    nationalTotal = 0;
     $('selected-unit').textContent = displayUnit(unit);
     $('coverage-text').textContent = unit.codigo === ALL_UNITS
-      ? 'Resultados desta página: atas gerenciadas pelas UASGs do Colégio Pedro II. Para consultar atas de qualquer órgão, abra a busca nacional do PNCP com o objeto informado.'
+      ? 'Busca nacional do PNCP por objeto e situação, agrupada por objeto nesta página. Número da ata, ano e compra filtram somente a página exibida.'
       : `Atas gerenciadas pela UASG ${unit.codigo}. Participações e adesões a atas de outros órgãos não estão incluídas. A unidade selecionada no painel não altera esta consulta.`;
-    $('national-search').hidden = unit.codigo !== ALL_UNITS;
+    $('national-search').hidden = true;
+    $('national-pagination').hidden = true;
     $('unit-picker').open = false;
     $('unit-search').value = '';
     renderUnitOptions();
@@ -166,8 +174,11 @@
     const article = element('article', 'ata-row');
     const number = element('div', 'ata-number');
     number.append(element('span', 'cell-label', 'Ata'), element('strong', '', ata.numeroAtaRegistroPreco || 'Sem número'));
-    if (selectedUnit.codigo === ALL_UNITS) number.append(element('small', 'ata-unit',
-      `${ata.nomeUnidadeGerenciadora || 'Unidade do CPII'} · UASG ${ata.codigoUnidadeGerenciadora}`));
+    if (selectedUnit.codigo === ALL_UNITS) {
+      const code = String(ata.codigoUnidadeGerenciadora || '');
+      number.append(element('small', 'ata-unit',
+        `${ata.nomeOrgao || ata.nomeUnidadeGerenciadora || 'Órgão não informado'}${code ? ' · ' + (/^\d{6}$/.test(code) ? 'UASG ' : 'Unidade ') + code : ''}`));
+    }
     const validity = element('div', 'ata-validity');
     validity.append(element('span', 'cell-label', 'Vigência'),
       element('span', 'date-range', `${formatDate(ata.dataVigenciaInicial)} a ${formatDate(ata.dataVigenciaFinal)}`));
@@ -220,7 +231,8 @@
       button.addEventListener('click', () => {
         $(key).value = '';
         visible = 10;
-        render();
+        if (key === 'objeto' && selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
+        else render();
       });
       box.append(button);
     });
@@ -263,30 +275,39 @@
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(ata);
     });
-    $('result-count').textContent = `${result.length} ${result.length === 1 ? 'ata' : 'atas'}${selectedUnit.codigo === ALL_UNITS ? ' do CPII' : ''} em ${groups.size} ${groups.size === 1 ? 'objeto' : 'objetos'}`;
+    $('result-count').textContent = `${result.length} ${result.length === 1 ? 'ata' : 'atas'} em ${groups.size} ${groups.size === 1 ? 'objeto' : 'objetos'}${selectedUnit.codigo === ALL_UNITS ? ' nesta página' : ''}`;
+    if (selectedUnit.codigo === ALL_UNITS) {
+      $('updated-at').textContent = `${nationalTotal.toLocaleString('pt-BR')} atas encontradas no PNCP · página ${nationalPage}`;
+    }
     if (!result.length) {
-      empty('Tente mudar o status, usar menos palavras ou limpar os filtros.', 'Nenhuma ata encontrada');
+      empty(selectedUnit.codigo === ALL_UNITS
+        ? 'Nenhuma ata desta página corresponde aos filtros. Avance ou refine o objeto pesquisado.'
+        : 'Tente mudar o status, usar menos palavras ou limpar os filtros.', 'Nenhuma ata encontrada');
       return;
     }
     const output = document.createDocumentFragment();
     const expand = Boolean(f.objeto || f.numero || f.ano || f.compra) || groups.size <= 3;
-    [...groups].slice(0, visible).forEach(([key, records], index) => {
+    [...groups].slice(0, selectedUnit.codigo === ALL_UNITS ? groups.size : visible).forEach(([key, records], index) => {
       output.append(objectGroup(key, records[0].objeto, records, today, expand || index === 0));
     });
     $('result-list').replaceChildren(output);
-    $('show-more').hidden = groups.size <= visible;
+    $('show-more').hidden = selectedUnit.codigo === ALL_UNITS || groups.size <= visible;
     $('show-more').textContent = `Mostrar mais objetos (${groups.size - visible} restantes)`;
   }
 
   function loadYears() {
+    const previous = $('ano').value;
     $('ano').replaceChildren(element('option', '', 'Todos os anos'));
     $('ano').firstChild.value = '';
-    const years = [...new Set(items.map(logic.ataYear).filter(Boolean))].sort().reverse();
+    const years = selectedUnit.codigo === ALL_UNITS
+      ? Array.from({length:new Date().getFullYear() - 2020}, (_, i) => String(new Date().getFullYear() - i))
+      : [...new Set(items.map(logic.ataYear).filter(Boolean))].sort().reverse();
     years.forEach(year => {
       const option = element('option', '', year);
       option.value = year;
       $('ano').append(option);
     });
+    if (years.includes(previous)) $('ano').value = previous;
   }
 
   async function loadDefault(signal) {
@@ -318,23 +339,28 @@
     }
     if (!response.ok) throw new Error('Base dos campi indisponível');
     const payload = await response.json();
-    if (!payload.generatedAt || !Array.isArray(payload.items) || (code !== ALL_UNITS && !payload.units?.includes(code))) {
+    if (!payload.generatedAt || !Array.isArray(payload.items) || !payload.units?.includes(code)) {
       throw new Error('A unidade ainda não está na base atualizada do CPII');
     }
-    return {items:payload.items.filter(ata => code === ALL_UNITS || String(ata.codigoUnidadeGerenciadora) === code), generatedAt:payload.generatedAt, cached:true};
+    return {items:payload.items.filter(ata => String(ata.codigoUnidadeGerenciadora) === code), generatedAt:payload.generatedAt, cached:true};
   }
 
-  async function loadAllCPII(signal) {
-    const [reitoria, campi] = await Promise.all([loadDefault(signal), loadCPII(ALL_UNITS, signal)]);
-    const unique = new Map();
-    [...reitoria.items, ...campi.items].forEach(ata => {
-      const key = ata.numeroControlePncpAta ||
-        [ata.codigoUnidadeGerenciadora, ata.numeroAtaRegistroPreco, ata.numeroCompra, ata.anoCompra].join('|');
-      unique.set(key, ata);
-    });
-    return {items:[...unique.values()],
-      generatedAt:new Date(Math.min(Date.parse(reitoria.generatedAt), Date.parse(campi.generatedAt))).toISOString(),
-      cached:true};
+  async function loadNational(f, page, signal) {
+    const url = logic.nationalSearchUrl(f, page, PAGE_SIZE);
+    let response;
+    try {
+      response = await fetch(url, {signal});
+    } catch (error) {
+      if (signal.aborted) throw error;
+      await new Promise(resolve => setTimeout(resolve, 400));
+      response = await fetch(url, {signal});
+    }
+    if (!response.ok) throw new Error(`Busca nacional indisponível (${response.status})`);
+    const data = await response.json();
+    if (!Array.isArray(data.items) || !Number.isSafeInteger(data.total) || data.total < 0 ||
+        data.items.length > PAGE_SIZE) throw new Error('Resposta inesperada do PNCP');
+    return {items:data.items.filter(record => record && record.document_type === 'ata').map(logic.mapPNCPRecord),
+      total:data.total, generatedAt:new Date().toISOString(), cached:false};
   }
 
   async function loadFromCompras(code, signal) {
@@ -366,38 +392,67 @@
     return {items:[...unique.values()], generatedAt:new Date().toISOString(), cached:false};
   }
 
+  function renderPagination() {
+    const nav = $('national-pagination');
+    nav.hidden = selectedUnit.codigo !== ALL_UNITS || !loaded || nationalTotal === 0;
+    if (nav.hidden) return;
+    $('page-label').textContent = `Página ${nationalPage} de ${Math.ceil(nationalTotal / PAGE_SIZE).toLocaleString('pt-BR')}`;
+    $('previous-page').disabled = nationalPage <= 1;
+    $('next-page').disabled = nationalPage * PAGE_SIZE >= nationalTotal;
+  }
+
+  function scheduleNationalSearch() {
+    if (currentRequest) currentRequest.abort();
+    currentRequest = undefined;
+    clearTimeout(nationalTimer);
+    loaded = false;
+    render();
+    nationalTimer = setTimeout(() => {nationalPage = 1; load();}, 350);
+  }
+
   async function load() {
     const unit = selectedUnit;
+    if (currentRequest) currentRequest.abort();
     const request = new AbortController();
     currentRequest = request;
     loaded = false;
     items = [];
-    $('result-count').textContent = unit.codigo === ALL_UNITS ? 'Consultando UASGs do CPII…' : `Consultando UASG ${unit.codigo}…`;
+    $('national-pagination').hidden = true;
+    $('national-search').hidden = true;
+    $('result-count').textContent = unit.codigo === ALL_UNITS
+      ? 'Buscando atas em todos os órgãos…' : `Consultando UASG ${unit.codigo}…`;
     $('updated-at').textContent = '';
-    empty('Buscando atas da unidade selecionada…');
-    const timeout = setTimeout(() => request.abort(), 90000);
+    empty(unit.codigo === ALL_UNITS ? 'Buscando atas pelo objeto no PNCP…' : 'Buscando atas da unidade selecionada…');
+    const timeout = setTimeout(() => request.abort(), unit.codigo === ALL_UNITS ? 30000 : 90000);
     try {
-      const payload = unitCache.get(unit.codigo) ||
-        (unit.codigo === ALL_UNITS ? await loadAllCPII(request.signal) :
-          unit.codigo === DEFAULT_UNIT ? await loadDefault(request.signal) :
+      const f = filters();
+      const payload = unit.codigo === ALL_UNITS ? await loadNational(f, nationalPage, request.signal) :
+        unitCache.get(unit.codigo) ||
+        (unit.codigo === DEFAULT_UNIT ? await loadDefault(request.signal) :
           isCPII(unit) ? await loadCPII(unit.codigo, request.signal) :
             await loadFromCompras(unit.codigo, request.signal));
       if (currentRequest !== request) return;
-      unitCache.set(unit.codigo, payload);
-      if (unitCache.size > 4) unitCache.delete(unitCache.keys().next().value);
+      if (unit.codigo === ALL_UNITS) nationalTotal = payload.total;
+      else {
+        unitCache.set(unit.codigo, payload);
+        if (unitCache.size > 4) unitCache.delete(unitCache.keys().next().value);
+      }
       items = payload.items;
       loadYears();
-      renderChips(filters());
-      const stamp = new Intl.DateTimeFormat('pt-BR', {timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(payload.generatedAt));
-      const delayed = Date.now() - new Date(payload.generatedAt).valueOf() > 48 * 60 * 60 * 1000;
-      $('updated-at').textContent = `${payload.cached ? 'Dados atualizados' : 'Consulta realizada'} em ${stamp} (horário de Brasília)${delayed ? ' · Confira a ata no PNCP' : ''}`;
       loaded = true;
+      if (unit.codigo !== ALL_UNITS) {
+        const stamp = new Intl.DateTimeFormat('pt-BR',
+          {timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(payload.generatedAt));
+        const delayed = Date.now() - new Date(payload.generatedAt).valueOf() > 48 * 60 * 60 * 1000;
+        $('updated-at').textContent = `${payload.cached ? 'Dados atualizados' : 'Consulta realizada'} em ${stamp} (horário de Brasília)${delayed ? ' · Confira a ata no PNCP' : ''}`;
+      }
       render();
+      renderPagination();
     } catch {
       if (currentRequest !== request) return;
       $('result-count').textContent = 'Consulta indisponível';
       empty(unit.codigo === ALL_UNITS
-        ? 'Não foi possível carregar todas as unidades do CPII agora. Você ainda pode buscar o objeto em todos os órgãos no PNCP.'
+        ? 'A busca nacional não respondeu agora. Tente novamente ou abra a mesma pesquisa no PNCP.'
         : isCPII(unit)
         ? 'Não foi possível carregar as atas deste campus agora. Selecione outra unidade ou tente novamente.'
         : 'A API pública bloqueou a consulta direta desta UASG. No PNCP, pesquise pelo objeto e selecione o órgão ou a unidade.',
@@ -406,29 +461,45 @@
       retry.type = 'button';
       retry.addEventListener('click', load);
       $('result-list').append(retry);
-      const source = element('a', 'source-fallback', 'Consultar atas no PNCP ↗');
-      const query = new URLSearchParams({pagina:'1', q:filters().objeto});
-      if (filters().status === 'vigente') query.set('status', 'vigente');
-      if (filters().status === 'todos') query.set('status', 'todos');
-      if (filters().status === 'nao-vigente') query.set('status', 'nao_vigente');
-      source.href = 'https://pncp.gov.br/app/atas?' + query;
-      source.target = '_blank';
-      source.rel = 'noopener noreferrer';
-      $('result-list').append(source);
+      if (unit.codigo === ALL_UNITS) {
+        updateNationalSearch(filters());
+        $('national-search').hidden = false;
+      } else {
+        const source = element('a', 'source-fallback', 'Consultar atas no PNCP ↗');
+        const query = new URLSearchParams({pagina:'1', q:filters().objeto});
+        query.set('status', filters().status === 'nao-vigente' ? 'nao_vigente' : filters().status);
+        source.href = 'https://pncp.gov.br/app/atas?' + query;
+        source.target = '_blank';
+        source.rel = 'noopener noreferrer';
+        $('result-list').append(source);
+      }
     } finally {
       clearTimeout(timeout);
     }
   }
 
-  for (const id of fields) $(id).addEventListener(id === 'ano' ? 'change' : 'input', () => {visible = 10; render();});
-  document.querySelectorAll('input[name="status"]').forEach(radio => radio.addEventListener('change', () => {visible = 10; render();}));
+  for (const id of fields) $(id).addEventListener(id === 'ano' ? 'change' : 'input', () => {
+    visible = 10;
+    if (id === 'objeto' && selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
+    else render();
+  });
+  document.querySelectorAll('input[name="status"]').forEach(radio => radio.addEventListener('change', () => {
+    visible = 10;
+    if (selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
+    else render();
+  }));
   $('clear-filters').addEventListener('click', () => {
     fields.forEach(id => {$(id).value = '';});
     document.querySelector('input[name="status"][value="todos"]').checked = true;
     visible = 10;
-    render();
+    if (selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
+    else render();
   });
   $('show-more').addEventListener('click', () => {visible += 10; render();});
+  $('previous-page').addEventListener('click', () => {if (nationalPage > 1) {nationalPage--; load();}});
+  $('next-page').addEventListener('click', () => {
+    if (nationalPage * PAGE_SIZE < nationalTotal) {nationalPage++; load();}
+  });
   $('unit-search').addEventListener('input', renderUnitOptions);
   $('unit-picker').addEventListener('toggle', () => { if ($('unit-picker').open) $('unit-search').focus(); });
   $('unit-picker').addEventListener('keydown', event => { if (event.key === 'Escape') $('unit-picker').open = false; });
