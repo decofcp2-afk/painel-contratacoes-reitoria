@@ -3,7 +3,8 @@
   const logic = window.AtasLogic;
   const $ = id => document.getElementById(id);
   const fields = ['objeto', 'numero', 'ano', 'compra'];
-  const labels = {objeto:'Objeto', numero:'Ata', ano:'Ano da ata', compra:'Compra'};
+  const nationalFields = ['uf', 'esfera', 'poder'];
+  const labels = {objeto:'Objeto', numero:'Ata', ano:'Ano da ata', compra:'Compra', uf:'Estado', esfera:'Esfera', poder:'Poder', orgao:'Órgão'};
   const statusLabels = {vigente:'Vigente', 'nao-vigente':'Não vigente', indefinida:'Situação a conferir'};
   let items = [];
   let loaded = false;
@@ -13,6 +14,7 @@
   const ALL_UNITS = '*';
   const allUnits = {codigo:ALL_UNITS, nome:'Todas as UASGs · busca nacional'};
   const PAGE_SIZE = 20;
+  const MAX_NATIONAL_RESULTS = 10000; // O PNCP limita paginação profunda da busca.
   let nationalPage = 1;
   let nationalTotal = 0;
   let nationalTimer;
@@ -33,6 +35,11 @@
   let selectedUnit = knownUnits[0];
   let currentRequest;
   const unitCache = new Map();
+  let selectedOrgan = null;
+  const organOptions = new Map();
+  let organTimer;
+  let organCatalog;
+  let organCatalogRequest;
 
   function todayInBrazil() {
     const parts = new Intl.DateTimeFormat('en-US', {timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
@@ -47,7 +54,9 @@
 
   function filters() {
     const checked = document.querySelector('input[name="status"]:checked');
-    return {...Object.fromEntries(fields.map(id => [id, $(id).value.trim()])), status:checked ? checked.value : 'todos'};
+    return {...Object.fromEntries(fields.map(id => [id, $(id).value.trim()])),
+      ...Object.fromEntries(nationalFields.map(id => [id, $(id).value])),
+      orgao:selectedOrgan?.id || '', status:checked ? checked.value : 'todos'};
   }
 
   function safePNCP(value) {
@@ -116,6 +125,65 @@
         : matches.length > 60 ? `Exibindo 60 de ${matches.length} unidades. Refine a busca pelo nome ou número.` : '';
   }
 
+  async function loadOrganCatalog() {
+    if (organCatalog) return organCatalog;
+    if (!organCatalogRequest) {
+      organCatalogRequest = fetch('https://pncp.gov.br/api/search/filters?tipos_documento=ata')
+        .then(response => {if (!response.ok) throw new Error('Catálogo indisponível'); return response.json();})
+        .then(data => {
+          if (!Array.isArray(data.filters?.orgaos)) throw new Error('Catálogo inválido');
+          organCatalog = data.filters.orgaos.filter(org => /^\d+$/.test(String(org.id)) && org.nome);
+          return organCatalog;
+        })
+        .finally(() => {organCatalogRequest = null;});
+    }
+    return organCatalogRequest;
+  }
+
+  async function renderOrganOptions() {
+    const input = $('orgao-search');
+    const term = logic.normalize(input.value);
+    const box = $('orgao-options');
+    box.replaceChildren();
+    organOptions.clear();
+    if (selectedUnit.codigo !== ALL_UNITS || term.length < 3) {
+      $('orgao-help').textContent = 'Digite pelo menos três caracteres e selecione uma sugestão.';
+      return;
+    }
+    $('orgao-help').textContent = 'Carregando órgãos do PNCP…';
+    try {
+      const orgs = await loadOrganCatalog();
+      if (logic.normalize(input.value) !== term || selectedUnit.codigo !== ALL_UNITS) return;
+      const words = term.split(/\s+/).filter(Boolean);
+      const matches = orgs.filter(org => words.every(word =>
+        logic.normalize(`${org.nome} ${org.cnpj || ''}`).includes(word))).slice(0, 40);
+      matches.forEach(org => {
+        const name = String(org.nome).trim();
+        const label = `${name} — ${org.cnpj || 'ID ' + org.id}`;
+        const option = element('option');
+        option.value = label;
+        box.append(option);
+        organOptions.set(label, {id:String(org.id), name});
+      });
+      $('orgao-help').textContent = matches.length
+        ? 'Selecione um órgão da lista para filtrar todas as páginas. Refine o nome para mais resultados.'
+        : 'Nenhum órgão encontrado. Tente parte do nome ou CNPJ.';
+    } catch {
+      if (logic.normalize(input.value) === term)
+        $('orgao-help').textContent = 'Não foi possível carregar órgãos agora. Tente digitar novamente.';
+    }
+  }
+
+  function handleOrganInput() {
+    clearTimeout(organTimer);
+    const chosen = organOptions.get($('orgao-search').value) || null;
+    const previousId = selectedOrgan?.id;
+    selectedOrgan = chosen;
+    if (previousId !== selectedOrgan?.id && selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
+    if (!chosen) organTimer = setTimeout(renderOrganOptions, 200);
+    else $('orgao-help').textContent = `Filtrando todas as páginas por ${chosen.name}.`;
+  }
+
   async function loadUnitCatalog() {
     try {
       let response;
@@ -144,8 +212,9 @@
     nationalTotal = 0;
     $('selected-unit').textContent = displayUnit(unit);
     $('coverage-text').textContent = unit.codigo === ALL_UNITS
-      ? 'Busca nacional do PNCP por objeto e situação, agrupada por objeto nesta página. Número da ata, ano e compra filtram somente a página exibida.'
+      ? 'Busca nacional do PNCP por objeto, situação, estado, esfera, poder e órgão, agrupada por objeto. Número da ata, ano e compra filtram somente a página exibida.'
       : `Atas gerenciadas pela UASG ${unit.codigo}. Participações e adesões a atas de outros órgãos não estão incluídas. A unidade selecionada no painel não altera esta consulta.`;
+    $('national-filters').hidden = unit.codigo !== ALL_UNITS;
     $('national-search').hidden = true;
     $('national-pagination').hidden = true;
     $('unit-picker').open = false;
@@ -224,14 +293,20 @@
     const box = $('active-filters');
     box.replaceChildren();
     const active = fields.filter(key => f[key]).map(key => [key, `${labels[key]}: ${f[key]}`]);
+    if (selectedUnit.codigo === ALL_UNITS) {
+      nationalFields.filter(key => f[key]).forEach(key => active.push([key,
+        `${labels[key]}: ${$(key).selectedOptions[0].textContent}`]));
+      if (selectedOrgan) active.push(['orgao', `Órgão: ${selectedOrgan.name}`]);
+    }
     active.forEach(([key, label]) => {
       const button = element('button', 'filter-chip', `${label} ×`);
       button.type = 'button';
       button.setAttribute('aria-label', `Remover filtro ${label}`);
       button.addEventListener('click', () => {
-        $(key).value = '';
+        if (key === 'orgao') {selectedOrgan = null; $('orgao-search').value = '';}
+        else $(key).value = '';
         visible = 10;
-        if (key === 'objeto' && selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
+        if ((key === 'objeto' || nationalFields.includes(key) || key === 'orgao') && selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
         else render();
       });
       box.append(button);
@@ -255,9 +330,12 @@
     if (f.status === 'vigente') query.set('status', 'vigente');
     else if (f.status === 'nao-vigente') query.set('status', 'nao_vigente');
     else query.set('status', 'todos');
-    // O PNCP não tem filtro de UASG aqui; mantemos a busca nacional sem restrição.
+    if (f.uf) query.set('ufs', f.uf);
+    if (f.esfera) query.set('esferas', f.esfera);
+    if (f.poder) query.set('poderes', f.poder);
+    if (f.orgao) query.set('orgaos', f.orgao);
     link.href = 'https://pncp.gov.br/app/atas?' + query;
-    link.textContent = f.objeto
+    link.textContent = f.orgao ? 'Abrir esta busca no PNCP ↗' : f.objeto
       ? 'Buscar “' + f.objeto + '” em todos os órgãos no PNCP ↗'
       : 'Buscar em todos os órgãos no PNCP ↗';
   }
@@ -277,7 +355,7 @@
     });
     $('result-count').textContent = `${result.length} ${result.length === 1 ? 'ata' : 'atas'} em ${groups.size} ${groups.size === 1 ? 'objeto' : 'objetos'}${selectedUnit.codigo === ALL_UNITS ? ' nesta página' : ''}`;
     if (selectedUnit.codigo === ALL_UNITS) {
-      $('updated-at').textContent = `${nationalTotal.toLocaleString('pt-BR')} atas encontradas no PNCP · página ${nationalPage}`;
+      $('updated-at').textContent = `${nationalTotal.toLocaleString('pt-BR')} atas encontradas no PNCP · página ${nationalPage}${nationalTotal > MAX_NATIONAL_RESULTS ? ' · refine os filtros para consultar além das primeiras 10.000' : ''}`;
     }
     if (!result.length) {
       empty(selectedUnit.codigo === ALL_UNITS
@@ -396,9 +474,9 @@
     const nav = $('national-pagination');
     nav.hidden = selectedUnit.codigo !== ALL_UNITS || !loaded || nationalTotal === 0;
     if (nav.hidden) return;
-    $('page-label').textContent = `Página ${nationalPage} de ${Math.ceil(nationalTotal / PAGE_SIZE).toLocaleString('pt-BR')}`;
+    $('page-label').textContent = `Página ${nationalPage} de ${Math.ceil(Math.min(nationalTotal, MAX_NATIONAL_RESULTS) / PAGE_SIZE).toLocaleString('pt-BR')}`;
     $('previous-page').disabled = nationalPage <= 1;
-    $('next-page').disabled = nationalPage * PAGE_SIZE >= nationalTotal;
+    $('next-page').disabled = nationalPage * PAGE_SIZE >= Math.min(nationalTotal, MAX_NATIONAL_RESULTS);
   }
 
   function scheduleNationalSearch() {
@@ -490,6 +568,9 @@
   }));
   $('clear-filters').addEventListener('click', () => {
     fields.forEach(id => {$(id).value = '';});
+    nationalFields.forEach(id => {$(id).value = '';});
+    selectedOrgan = null;
+    $('orgao-search').value = '';
     document.querySelector('input[name="status"][value="todos"]').checked = true;
     visible = 10;
     if (selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
@@ -498,8 +579,13 @@
   $('show-more').addEventListener('click', () => {visible += 10; render();});
   $('previous-page').addEventListener('click', () => {if (nationalPage > 1) {nationalPage--; load();}});
   $('next-page').addEventListener('click', () => {
-    if (nationalPage * PAGE_SIZE < nationalTotal) {nationalPage++; load();}
+    if (nationalPage * PAGE_SIZE < Math.min(nationalTotal, MAX_NATIONAL_RESULTS)) {nationalPage++; load();}
   });
+  nationalFields.forEach(id => $(id).addEventListener('change', () => {
+    if (selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
+  }));
+  $('orgao-search').addEventListener('input', handleOrganInput);
+  $('orgao-search').addEventListener('change', handleOrganInput);
   $('unit-search').addEventListener('input', renderUnitOptions);
   $('unit-picker').addEventListener('toggle', () => { if ($('unit-picker').open) $('unit-search').focus(); });
   $('unit-picker').addEventListener('keydown', event => { if (event.key === 'Escape') $('unit-picker').open = false; });
