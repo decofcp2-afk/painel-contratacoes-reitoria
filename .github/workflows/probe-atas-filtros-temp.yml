@@ -8,30 +8,26 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Locate PNCP facet API and source
+      - name: Validate PNCP ata filter catalog
         run: |
           python3 - <<'PY'
-          import urllib.request,re,json,time
-          def get(url):
-              req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0","Accept":"*/*"})
-              for attempt in range(3):
-                  try:
-                      with urllib.request.urlopen(req,timeout=35) as response:return response.read().decode("utf-8","replace")
-                  except Exception:
-                      if attempt==2: raise
-                      time.sleep(1)
-          base="https://pncp.gov.br/app/"
-          names=["default-src_app_pages_pcaPage_planejamento_module_ts.6b3fa324f7dc2b8e.js","src_app_pages_search_search_module_ts.b917591f0fcfb4cd.js"]
-          for name in names:
-              s=get(base+name)
-              print("FILE",name,len(s))
-              for term in ["orgaos","searchURL","orgao_id","/facets","facets","/filtros","/filters"]:
-                  ms=list(re.finditer(term,s,re.I))
-                  print("TERM",term,len(ms))
-                  for m in ms[:10]:print("SNIP",term,s[max(0,m.start()-240):m.start()+420][:660])
-          s=get("https://pncp.gov.br/api/search/?tipos_documento=ata&q=computador&status=todos&pagina=1&tam_pagina=1")
-          data=json.loads(s)
-          print("RESPONSE_KEYS",list(data))
-          for k,v in data.items():
-              if k!="items":print("RESPONSE_FIELD",k,str(v)[:700])
+          import urllib.request,json,time
+          url="https://pncp.gov.br/api/search/filters?tipos_documento=ata"
+          for attempt in range(3):
+              try:
+                  req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0","Accept":"application/json"})
+                  with urllib.request.urlopen(req,timeout=40) as response:
+                      raw=response.read()
+                      print("CORS",response.headers.get("Access-Control-Allow-Origin"))
+                      print("BYTES",len(raw))
+                  break
+              except Exception as e:
+                  if attempt==2:raise
+                  time.sleep(1)
+          data=json.loads(raw)
+          print("TYPE",type(data).__name__)
+          print("KEYS",list(data) if isinstance(data,dict) else "")
+          if isinstance(data,dict):
+              for k,v in data.items():
+                  print("FIELD",k,type(v).__name__,len(v) if hasattr(v,"__len__") else "",str(v[:3] if isinstance(v,list) else v)[:1600])
           PY
