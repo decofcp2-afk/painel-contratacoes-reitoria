@@ -8,23 +8,28 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Identify search module and organ options
+      - name: Identify PNCP organ options
         run: |
           python3 - <<'PY'
-          import urllib.request,urllib.parse,re,time
+          import urllib.request,re,time
           def get(url):
               req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0","Accept":"*/*"})
-              for attempt in range(2):
+              for attempt in range(3):
                   try:
-                      with urllib.request.urlopen(req,timeout=25) as response:return response.read().decode("utf-8","replace")
-                  except Exception:
-                      if attempt:raise
-                      time.sleep(.4)
+                      with urllib.request.urlopen(req,timeout=35) as response:return response.read().decode("utf-8","replace")
+                  except Exception as ex:
+                      if attempt==2: raise
+                      time.sleep(1)
           base="https://pncp.gov.br/app/"
           main=get(base+"main.31898e96dc8bd8d8.js")
-          runtime=get(base+"runtime.57d4d4892b4e9635.js")
-          print("RUNTIME",runtime[:3500])
-          for term in ['path:"atas"','path:"contratacoes"','searchURL','loadChildren']:
-              ms=list(re.finditer(re.escape(term),main))
-              print("MAIN",term,"count",len(ms),"excerpt",[main[max(0,m.start()-240):m.end()+340] for m in ms[:3]])
+          point=main.find('path:"atas"')
+          print("ROUTE",main[point:point+1150])
+          files={"search":"src_app_pages_search_search_module_ts.b917591f0fcfb4cd.js","common":"common.e671a4bb8090c6ed.js","results":"default-src_app_result-panel_result-panel_module_ts-src_app_result-panel_results-panel_result-66757b.55c721c4512fa7e4.js"}
+          for name,file in files.items():
+              s=get(base+file)
+              print("FILE",name,len(s))
+              for term in ["orgaos","orgao","searchURL","tipoOrgan","/api/search"]:
+                  matches=list(re.finditer(term,s,re.I))
+                  print("TERM",name,term,len(matches))
+                  for m in matches[:5]:print("SNIP",name,term,s[max(0,m.start()-260):m.start()+380][:640])
           PY
