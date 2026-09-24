@@ -50,5 +50,35 @@
       String(a.numeroAtaRegistroPreco ?? '').localeCompare(String(b.numeroAtaRegistroPreco ?? ''), 'pt-BR', {numeric:true}));
   }
 
-  return {normalize, datePart, ataYear, situation, filterAtas};
+  function mapPNCPRecord(record) {
+    const path = String(record.item_url || '');
+    const linkAtaPNCP = /^\/atas\/\d{14}\/\d{4}\/\d+\/\d+$/.test(path)
+      ? 'https://pncp.gov.br/app' + path : '';
+    return {
+      numeroAtaRegistroPreco:String(record.title || '').replace(/^Ata\s+(?:n[º°o]\.?\s*)?/i, '').trim() || 'Sem número',
+      objeto:String(record.description || 'Objeto não informado'),
+      codigoUnidadeGerenciadora:String(record.unidade_codigo || ''),
+      nomeUnidadeGerenciadora:String(record.unidade_nome || ''),
+      nomeOrgao:String(record.orgao_nome || ''),
+      dataVigenciaInicial:record.data_inicio_vigencia,
+      dataVigenciaFinal:record.data_fim_vigencia,
+      dataAssinatura:record.data_assinatura,
+      numeroCompra:record.numero_sequencial_compra_ata,
+      anoCompra:record.ano,
+      numeroControlePncpAta:record.numero_controle_pncp,
+      linkAtaPNCP,
+      ataExcluido:record.cancelado === true
+    };
+  }
+
+  function nationalSearchUrl(filters, page, pageSize) {
+    const query = new URLSearchParams({
+      tipos_documento:'ata', q:filters.objeto || '',
+      status:filters.status === 'nao-vigente' ? 'nao_vigente' : filters.status,
+      pagina:String(page), tam_pagina:String(pageSize)
+    });
+    return 'https://pncp.gov.br/api/search/?' + query;
+  }
+
+  return {normalize, datePart, ataYear, situation, filterAtas, mapPNCPRecord, nationalSearchUrl};
 });
