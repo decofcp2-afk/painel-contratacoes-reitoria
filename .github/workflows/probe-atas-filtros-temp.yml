@@ -8,28 +8,22 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Validate PNCP ata filter catalog
+      - name: Check PNCP facet identifiers
         run: |
           python3 - <<'PY'
-          import urllib.request,json,time,gzip
-          url="https://pncp.gov.br/api/search/filters?tipos_documento=ata"
+          import urllib.request,json,gzip,time
+          u="https://pncp.gov.br/api/search/filters?tipos_documento=ata"
           for attempt in range(3):
               try:
-                  req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0","Accept":"application/json"})
-                  with urllib.request.urlopen(req,timeout=40) as response:
-                      raw=response.read()
-                      print("CORS",response.headers.get("Access-Control-Allow-Origin"))
-                      print("ENCODING",response.headers.get("Content-Encoding"))
-                      print("BYTES",len(raw))
+                  with urllib.request.urlopen(urllib.request.Request(u,headers={"User-Agent":"Mozilla/5.0"}),timeout=35) as r: b=r.read()
                   break
               except Exception:
                   if attempt==2:raise
                   time.sleep(1)
-          if raw[:2]==b"\x1f\x8b":raw=gzip.decompress(raw)
-          data=json.loads(raw)
-          print("TYPE",type(data).__name__)
-          print("KEYS",list(data) if isinstance(data,dict) else "")
-          if isinstance(data,dict):
-              for k,v in data.items():
-                  print("FIELD",k,type(v).__name__,len(v) if hasattr(v,"__len__") else "",str(v[:3] if isinstance(v,list) else v)[:1800])
+          if b[:2]==b"\x1f\x8b":b=gzip.decompress(b)
+          f=json.loads(b)["filters"]
+          for key,val in f.items():
+              print("FACET",key,len(val),val[:8])
+          orgs=f["orgaos"]
+          print("CPII",[(o["id"],o["nome"],o.get("cnpj")) for o in orgs if "PEDRO II" in o["nome"].upper()][:20])
           PY
