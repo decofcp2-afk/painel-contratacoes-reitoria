@@ -8,6 +8,7 @@ on:
       - '**'
     paths:
       - scripts/update_atas_cpii.py
+      - scripts/probe_saldo.py
       - .github/workflows/update-atas-cpii.yml
 permissions:
   contents: write
