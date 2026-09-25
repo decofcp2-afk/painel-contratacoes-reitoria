@@ -1,0 +1,67 @@
+const {test} = require('node:test');
+const assert = require('node:assert/strict');
+const {readFileSync} = require('node:fs');
+const {join} = require('node:path');
+const {context, percentage, listItems, getBalance} = require('../atas-adesao');
+
+const ata = {
+  numeroAtaRegistroPreco:'00107/2026', codigoUnidadeGerenciadora:'153167',
+  numeroCompra:'90007', dataVigenciaInicial:'2026-05-19',
+  numeroControlePncpAta:'pncp-1'
+};
+
+test('saldo de adesão é calculado por item, inclusive saldo zero', () => {
+  assert.equal(percentage({saldoAdesao:75, qtdLimiteAdesao:150}), 50);
+  assert.equal(percentage({saldoAdesao:0, qtdLimiteAdesao:100}), 0);
+  assert.equal(percentage({saldoAdesao:null, qtdLimiteAdesao:100}), null);
+  assert.equal(percentage({saldoAdesao:2, qtdLimiteAdesao:0}), null);
+  assert.equal(context({...ata, codigoUnidadeGerenciadora:'12345678901234'}), null);
+});
+
+test('descoberta dos itens filtra outra ata, UASG e registros excluídos', async () => {
+  let request;
+  const fetcher = async url => {
+    request = new URL(url);
+    return {ok:true, json:async () => ({resultado:[
+      {numeroAtaRegistroPreco:'00107/2026', codigoUnidadeGerenciadora:153167,
+        numeroControlePncpAta:'pncp-1', numeroItem:'1', descricaoItem:'Livro'},
+      {numeroAtaRegistroPreco:'00107/2026', codigoUnidadeGerenciadora:153167,
+        numeroControlePncpAta:'pncp-1', numeroItem:'1', descricaoItem:'Livro'},
+      {numeroAtaRegistroPreco:'00108/2026', codigoUnidadeGerenciadora:153167, numeroItem:'2'},
+      {numeroAtaRegistroPreco:'00107/2026', codigoUnidadeGerenciadora:153167, numeroItem:'3', itemExcluido:true}
+    ], totalPaginas:1})};
+  };
+  const items = await listItems(ata, fetcher);
+  assert.deepEqual(items, [{numeroItem:'1', descricao:'Livro'}]);
+  assert.equal(request.pathname, '/modulo-arp/2_consultarARPItem');
+  assert.equal(request.searchParams.get('numeroCompra'), '90007');
+  assert.equal(request.searchParams.get('dataVigenciaInicialMin'), '2026-05-19');
+  await listItems({...ata, origemConsulta:'pncp'}, fetcher);
+  assert.equal(request.searchParams.has('numeroCompra'), false, 'sequencial do PNCP não é número da compra');
+});
+
+test('saldo é retornado sem agregar fornecedores e só da ata e item pedidos', async () => {
+  const fetcher = async url => {
+    const q = new URL(url);
+    assert.equal(q.pathname, '/modulo-arp/3_consultarUnidadesItem');
+    assert.equal(q.searchParams.get('numeroItem'), '1');
+    return {ok:true, json:async () => ({resultado:[
+      {numeroAta:'00107/2026', unidadeGerenciadora:'153167', numeroItem:'1',
+        descricaoItem:'Livro', fornecedor:'Editora A', saldoAdesao:30, qtdLimiteAdesao:60, unidade:'153167'},
+      {numeroAta:'00107/2026', unidadeGerenciadora:'153167', numeroItem:'1',
+        descricaoItem:'Livro', fornecedor:'Editora B', saldoAdesao:0, qtdLimiteAdesao:100, unidade:'153167'},
+      {numeroAta:'00107/2026', unidadeGerenciadora:'153167', numeroItem:'2',
+        saldoAdesao:10, qtdLimiteAdesao:100}
+    ], totalPaginas:1})};
+  };
+  const rows = await getBalance(ata, '1', fetcher);
+  assert.equal(rows.length, 2);
+  assert.deepEqual(rows.map(row => row.percentual), [50,0]);
+  assert.deepEqual(rows.map(row => row.fornecedor), ['Editora A','Editora B']);
+});
+
+test('página mantém consulta opcional e origem oficial acessível', () => {
+  const html = readFileSync(join(__dirname, '..', 'atas.html'), 'utf8');
+  assert.match(html, /script src="atas-adesao.js"/);
+  assert.match(html, /connect-src[^"]*https:\/\/dadosabertos\.compras\.gov\.br/);
+});
