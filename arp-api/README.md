@@ -1,4 +1,4 @@
-# Consulta pública de itens e saldos de ARP
+# Ponte de consulta de itens e saldos de ARP (legada)
 
 O painel estático usa este Apps Script somente como ponte de leitura para os
 endpoints públicos `2_consultarARPItem`, `3_consultarUnidadesItem` e
@@ -6,16 +6,15 @@ endpoints públicos `2_consultarARPItem`, `3_consultarUnidadesItem` e
 ARP do Compras.gov.br. O navegador chama o serviço com JSONP porque a API de
 Dados Abertos não envia cabeçalho CORS para o domínio do painel.
 
-O painel localiza atas pelo seletor de UASG e consulta os saldos dos primeiros
-cinco itens ao abrir uma ata; "Ver mais itens" carrega os demais em grupos de
-cinco. A rota de itens ainda aceita CNPJ para compatibilidade, mas a interface
-não oferece mais esse filtro. O saldo é consultado para cada ata, UASG e item.
-A resposta da API pode repetir o mesmo saldo para diferentes unidades; a
-interface não soma esses registros. O resultado é informativo e deve ser
-conferido na origem antes de solicitar adesão.
-O total de adesões aprovadas vem do endpoint 5. O saldo exibido pelo painel é
-**global**. O saldo individual da unidade solicitante, exibido na simulação
-autenticada do Contratos.gov.br, não é calculado pelo painel.
+O painel não chama mais esta ponte nem exibe saldos. Cada ata oferece um link
+para consultar a adesão no Contratos.gov.br. A tag "Permite adesão" usa o
+indicador `permite_adesao` publicado pelo PNCP, atualizado diariamente em
+`atas-adesao-pncp.json` para as atas do Colégio Pedro II. Ausência do indicador
+aparece como "Adesão não informada". A permissão da ata não informa saldo nem
+garante autorização da unidade gerenciadora.
+
+A ponte permanece no repositório apenas para compatibilidade técnica com o
+projeto Apps Script já publicado; seus resultados não aparecem na interface.
 
 ## Publicação
 

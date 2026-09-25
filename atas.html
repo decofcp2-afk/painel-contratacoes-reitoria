@@ -8,13 +8,12 @@
   <meta name="theme-color" content="#0b1f3d">
   <meta name="description" content="Consulte atas de registro de preços por UASG, objeto e vigência, com acesso aos documentos no PNCP.">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="atas.css?v=arp-20260925f">
+  <link rel="stylesheet" href="atas.css?v=adesao-20260925a">
   <title>Consulta de atas | Colégio Pedro II</title>
   <script src="config.js?v=arp-20260925" defer></script>
   <script src="data-gateway.js?v=arp-20260925b" defer></script>
-  <script src="atas-logic.js" defer></script>
-  <script src="atas-adesao.js?v=arp-20260925e" defer></script>
-  <script src="atas-ui.js?v=arp-20260925f" defer></script>
+  <script src="atas-logic.js?v=adesao-20260925a" defer></script>
+  <script src="atas-ui.js?v=adesao-20260925a" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -57,9 +56,10 @@
             <label><input type="radio" name="status" value="nao-vigente"><span>Não vigentes</span></label>
           </div>
         </fieldset>
+        <div class="field adhesion-filter"><label for="adesao">Permite adesão</label><select id="adesao"><option value="sim" selected>Sim</option><option value="todos">Todos</option><option value="nao">Não</option></select></div>
       </div>
       <details id="more-filters" class="more-filters">
-        <summary><span class="more-filters-show">Mais filtros</span><span class="more-filters-hide">Ocultar filtros</span><span class="more-filters-arrow" aria-hidden="true">⌄</span></summary>
+        <summary><span class="more-filters-show">Mais filtros</span><span class="more-filters-hide">Ocultar filtros</span><span class="more-filters-arrow" aria-hidden="true"></span></summary>
         <div class="secondary-filters">
           <div class="field"><label for="numero">Número da ata</label><input id="numero" type="search" placeholder="Ex.: 12/2025" autocomplete="off"></div>
           <div class="field"><label for="ano">Ano da ata</label><select id="ano"><option value="">Todos os anos</option></select></div>
@@ -70,13 +70,14 @@
           <div class="field"><label for="esfera">Esfera</label><select id="esfera"><option value="">Todas as esferas</option><option value="F">Federal</option><option value="E">Estadual</option><option value="M">Municipal</option><option value="D">Distrital</option><option value="N">Não se aplica</option></select></div>
           <div class="field"><label for="poder">Poder</label><select id="poder"><option value="">Todos os poderes</option><option value="E">Executivo</option><option value="L">Legislativo</option><option value="J">Judiciário</option><option value="N">Não se aplica</option></select></div>
           <div class="field organ-field"><label for="orgao-search">Órgão</label><input id="orgao-search" type="search" list="orgao-options" placeholder="Digite o nome para ver sugestões" autocomplete="off" aria-describedby="orgao-help"><datalist id="orgao-options"></datalist><small id="orgao-help">Digite pelo menos três caracteres e selecione uma sugestão.</small></div>
+          <p id="scope-filters-help" class="scope-filters-help">Para ampliar esta busca, altere um destes filtros ou selecione Todas as UASGs.</p>
         </div>
       </details>
       <div class="filters-footer"><div id="active-filters" class="active-filters" aria-label="Filtros ativos"></div><button id="clear-filters" class="clear-button" type="button">Limpar filtros</button></div>
     </section>
     <section class="results" aria-labelledby="results-title">
       <div class="results-heading"><h2 id="results-title"><span id="result-count" role="status" aria-live="polite">Carregando atas…</span></h2><p id="updated-at" class="updated-at"></p></div>
-      <aside class="coverage-note"><span class="info-icon" aria-hidden="true">i</span><p id="coverage-text">Atas gerenciadas pela UASG selecionada. Participações e adesões a atas de outros órgãos não estão incluídas. A unidade selecionada no painel não altera esta consulta.</p><a id="national-search" class="national-search" href="https://pncp.gov.br/app/atas?pagina=1&amp;q=&amp;status=vigente" target="_blank" rel="noopener noreferrer" hidden>Buscar em todos os órgãos no PNCP ↗</a></aside>
+      <aside class="coverage-note"><span class="info-icon" aria-hidden="true">i</span><p id="coverage-text">Atas gerenciadas pela UASG selecionada. A tag de adesão reflete o indicador publicado no PNCP para órgãos não participantes; confirme as condições e a disponibilidade na origem. Participações e adesões a atas de outros órgãos não estão incluídas.</p><a id="national-search" class="national-search" href="https://pncp.gov.br/app/atas?pagina=1&amp;q=&amp;status=vigente" target="_blank" rel="noopener noreferrer" hidden>Buscar em todos os órgãos no PNCP ↗</a></aside>
       <div id="result-list" class="result-list"><div class="empty-state">Carregando atas…</div></div>
       <button id="show-more" class="show-more" type="button" hidden>Mostrar mais atas</button>
       <nav id="national-pagination" class="national-pagination" aria-label="Páginas das atas de todos os órgãos" hidden><button id="previous-page" type="button">← Anterior</button><span id="page-label" aria-live="polite">Página 1</span><button id="next-page" type="button">Próxima →</button></nav>

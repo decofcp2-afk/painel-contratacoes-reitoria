@@ -1,0 +1,31 @@
+name: Atualizar possibilidade de adesão das atas do CPII
+on:
+  schedule:
+    - cron: '17 11 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/update_adesao_pncp.py
+      - .github/workflows/update-adesao-pncp.yml
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Consultar indicadores publicados no PNCP
+        run: python scripts/update_adesao_pncp.py
+      - name: Publicar dados
+        run: |
+          if git diff --quiet -- atas-adesao-pncp.json; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add atas-adesao-pncp.json
+          git commit -m 'dados: atualizar possibilidade de adesao no PNCP'
+          git push

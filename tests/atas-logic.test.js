@@ -1,6 +1,6 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {ataYear, situation, filterAtas} = require('../atas-logic.js');
+const {ataYear, situation, adhesionPermission, filterAtas} = require('../atas-logic.js');
 
 const ata = (overrides = {}) => ({
   numeroAtaRegistroPreco:'12/2025', numeroCompra:'90011', anoCompra:'2024',
@@ -39,4 +39,19 @@ test('objetos com diferença de espaços e acentos ficam próximos na ordenaçã
   const f = {objeto:'', numero:'', ano:'', compra:'', status:'todos'};
   assert.deepEqual(filterAtas(records, f, '2026-09-23').map(a => a.objeto),
     ['Aquisição   de\nMobiliário', 'aquisicao de mobiliario', 'Zeladoria']);
+});
+
+test('filtro de adesão diferencia sim, não e dado ausente sem presumir permissão', () => {
+  const records = [
+    ata({numeroAtaRegistroPreco:'1/2025', possibilidadeAdesao:true}),
+    ata({numeroAtaRegistroPreco:'2/2025', possibilidadeAdesao:false}),
+    ata({numeroAtaRegistroPreco:'3/2025'})
+  ];
+  const f = {objeto:'', numero:'', ano:'', compra:'', status:'todos'};
+  assert.equal(adhesionPermission(records[0]), true);
+  assert.equal(adhesionPermission(records[1]), false);
+  assert.equal(adhesionPermission(records[2]), null);
+  assert.deepEqual(filterAtas(records, {...f, adesao:'sim'}, '2026-09-23').map(r => r.numeroAtaRegistroPreco), ['1/2025']);
+  assert.deepEqual(filterAtas(records, {...f, adesao:'nao'}, '2026-09-23').map(r => r.numeroAtaRegistroPreco), ['2/2025']);
+  assert.equal(filterAtas(records, {...f, adesao:'todos'}, '2026-09-23').length, 3);
 });

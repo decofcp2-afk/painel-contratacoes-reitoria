@@ -33,13 +33,20 @@
     return start <= today && today <= end ? 'vigente' : 'nao-vigente';
   }
 
-  function filterAtas(items, filters, today) {
+  function adhesionPermission(ata) {
+    const value = ata.possibilidadeAdesao ?? ata.permite_adesao;
+    return typeof value === 'boolean' ? value : null;
+  }
+
+  function filterAtas(items, filters, today, permissionForAta = adhesionPermission) {
     const objectTerms = normalize(filters.objeto).split(/\s+/).filter(Boolean);
     const number = normalize(filters.numero);
     const purchase = normalize(filters.compra);
     const result = items.filter(ata => {
       const status = situation(ata, today);
       return (filters.status === 'todos' || status === filters.status) &&
+        (filters.adesao !== 'sim' || permissionForAta(ata) === true) &&
+        (filters.adesao !== 'nao' || permissionForAta(ata) === false) &&
         objectTerms.every(term => normalize(ata.objeto).includes(term)) &&
         (!number || normalize(ata.numeroAtaRegistroPreco).includes(number)) &&
         (!filters.ano || ataYear(ata) === filters.ano) &&
@@ -66,6 +73,7 @@
       numeroCompra:record.numero_sequencial_compra_ata,
       anoCompra:record.ano,
       numeroControlePncpAta:record.numero_controle_pncp,
+      possibilidadeAdesao:adhesionPermission(record),
       linkAtaPNCP,
       origemConsulta:'pncp',
       ataExcluido:record.cancelado === true
@@ -82,8 +90,10 @@
     if (filters.esfera) query.set('esferas', filters.esfera);
     if (filters.poder) query.set('poderes', filters.poder);
     if (filters.orgao) query.set('orgaos', filters.orgao);
+    if (filters.adesao === 'sim' || filters.adesao === 'nao')
+      query.set('permite_adesao', String(filters.adesao === 'sim'));
     return 'https://pncp.gov.br/api/search/?' + query;
   }
 
-  return {normalize, datePart, ataYear, situation, filterAtas, mapPNCPRecord, nationalSearchUrl};
+  return {normalize, datePart, ataYear, situation, adhesionPermission, filterAtas, mapPNCPRecord, nationalSearchUrl};
 });
