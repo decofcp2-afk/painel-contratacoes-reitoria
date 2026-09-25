@@ -36,6 +36,24 @@
     return balance / limit * 100;
   }
 
+  async function withDeadline(task, timeoutMs) {
+    const controller = new AbortController();
+    let timer;
+    try {
+      return await Promise.race([
+        task(controller.signal),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => {
+            controller.abort();
+            reject(new Error('Tempo limite da consulta excedido.'));
+          }, timeoutMs || 15000);
+        })
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function pages(endpoint, params, fetcher, signal) {
     const records = [];
     for (let page = 1; page <= MAX_PAGES; page++) {
@@ -114,5 +132,5 @@
     }));
   }
 
-  return {context, identity, percentage, listItems, getBalance};
+  return {context, identity, percentage, withDeadline, listItems, getBalance};
 });

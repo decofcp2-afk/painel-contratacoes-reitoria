@@ -294,9 +294,12 @@
     consult.type = 'button';
     const status = element('p', 'adhesion-note', 'Buscando itens da ata…');
     status.setAttribute('role', 'status');
+    const retry = element('button', 'adhesion-retry', 'Tentar carregar itens novamente');
+    retry.type = 'button';
+    retry.hidden = true;
     const result = element('div', 'adhesion-results');
     controls.append(select, manual, consult);
-    panel.append(intro, controls, status, result);
+    panel.append(intro, controls, status, retry, result);
     article.append(panel);
     button.setAttribute('aria-expanded', 'true');
 
@@ -310,33 +313,41 @@
       status.textContent = 'Consultando o saldo do item ' + item + '…';
       result.replaceChildren();
       try {
-        const rows = await adesao.getBalance(ata, item, fetch);
+        const rows = await adesao.withDeadline(signal => adesao.getBalance(ata, item, fetch, signal));
         status.textContent = 'Saldo publicado para o item ' + item + ' · consulta realizada agora';
         renderBalance(result, rows);
       } catch {
-        status.textContent = 'A consulta do saldo não respondeu. Tente novamente ou confira no Compras.gov.br.';
+        status.textContent = 'Não foi possível obter o saldo na API pública. O percentual não está disponível agora; tente novamente mais tarde ou confira no Compras.gov.br.';
       } finally {
         consult.disabled = false;
       }
     });
-    try {
-      const itens = await adesao.listItems(ata, fetch);
-      select.replaceChildren();
-      select.append(element('option', '', itens.length ? 'Selecione um item' : 'Itens não localizados'));
-      itens.forEach(item => {
-        const option = element('option', '', 'Item ' + item.numeroItem + (item.descricao ? ' · ' + item.descricao.slice(0, 90) : ''));
-        option.value = item.numeroItem;
-        select.append(option);
-      });
-      select.disabled = !itens.length;
-      status.textContent = itens.length
-        ? 'Selecione um dos ' + itens.length + ' itens para ver o saldo.'
-        : 'Itens não localizados na base pública. Informe o número do item para consultar.';
-    } catch {
-      select.replaceChildren();
+    async function loadItems() {
+      retry.hidden = true;
       select.disabled = true;
-      status.textContent = 'A lista de itens não está disponível. Informe o número do item para consultar diretamente.';
+      select.replaceChildren(element('option', '', 'Carregando itens…'));
+      status.textContent = 'Buscando itens da ata…';
+      try {
+        const itens = await adesao.withDeadline(signal => adesao.listItems(ata, fetch, signal));
+        select.replaceChildren(element('option', '', itens.length ? 'Selecione um item' : 'Nenhum item localizado'));
+        itens.forEach(item => {
+          const option = element('option', '', 'Item ' + item.numeroItem + (item.descricao ? ' · ' + item.descricao.slice(0, 90) : ''));
+          option.value = item.numeroItem;
+          select.append(option);
+        });
+        select.disabled = !itens.length;
+        status.textContent = itens.length
+          ? 'Selecione um dos ' + itens.length + ' itens para ver o saldo.'
+          : 'Itens não localizados na base pública. Você pode informar o número do item.';
+      } catch {
+        select.replaceChildren(element('option', '', 'Lista de itens indisponível'));
+        select.disabled = true;
+        retry.hidden = false;
+        status.textContent = 'A API pública não retornou os itens desta ata. Você pode tentar novamente ou informar o número do item; o saldo também depende da API.';
+      }
     }
+    retry.addEventListener('click', loadItems);
+    await loadItems();
   }
 
   function card(ata, today) {
