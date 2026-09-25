@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   const logic = window.AtasLogic;
+  const adesao = window.AtasAdesao;
   const $ = id => document.getElementById(id);
   const fields = ['objeto', 'numero', 'ano', 'compra'];
   const nationalFields = ['uf', 'esfera', 'poder'];
@@ -239,6 +240,105 @@
     parent.append(a);
   }
 
+  function renderBalance(target, rows) {
+    target.replaceChildren();
+    if (!rows.length) {
+      target.append(element('p', 'adhesion-note', 'Não há saldo de adesão publicado para este item. Confira a ata no Compras.gov.br.'));
+      return;
+    }
+    const qty = value => value === null ? 'não informado' : value.toLocaleString('pt-BR');
+    rows.forEach(row => {
+      const entry = element('div', 'adhesion-balance');
+      const heading = element('strong', '', row.descricao || 'Item consultado');
+      const meta = element('span', '', [row.fornecedor && 'Fornecedor: ' + row.fornecedor,
+        row.unidade && 'Unidade: ' + row.unidade].filter(Boolean).join(' · '));
+      const invalid = row.saldo !== null && row.limite !== null && row.saldo > row.limite;
+      const value = invalid
+        ? 'Saldo: ' + qty(row.saldo) + ' · limite: ' + qty(row.limite) + ' · dados divergentes; confira na origem'
+        : row.percentual === null
+        ? 'Saldo para adesão: ' + qty(row.saldo) + ' · percentual não disponível'
+        : qty(row.saldo) + ' de ' + qty(row.limite) + ' unidades · ' +
+          row.percentual.toLocaleString('pt-BR', {maximumFractionDigits:1}) + '% do limite de adesão disponível';
+      entry.append(heading, meta, element('b', 'adhesion-value', value));
+      if (row.atualizadoEm) {
+        const date = new Date(row.atualizadoEm);
+        if (!Number.isNaN(date.getTime())) entry.append(element('small', '', 'Dados atualizados na origem em ' +
+          new Intl.DateTimeFormat('pt-BR', {timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(date)));
+      }
+      target.append(entry);
+    });
+  }
+
+  async function openBalance(ata, article, button) {
+    const current = article.querySelector('.ata-adhesion');
+    if (current) {
+      current.remove();
+      button.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    const panel = element('section', 'ata-adhesion');
+    panel.setAttribute('aria-label', 'Saldo para adesão por item');
+    const intro = element('p', 'adhesion-note',
+      'O saldo é por item e corresponde ao limite informado no Compras.gov.br. A disponibilidade para sua unidade depende da análise do pedido.');
+    const controls = element('div', 'adhesion-controls');
+    const select = element('select', 'adhesion-select');
+    select.setAttribute('aria-label', 'Selecione o item da ata');
+    select.append(element('option', '', 'Carregando itens…'));
+    const manual = element('input', 'adhesion-input');
+    manual.type = 'text';
+    manual.inputMode = 'numeric';
+    manual.pattern = '[0-9]*';
+    manual.placeholder = 'Ou informe o nº do item';
+    manual.setAttribute('aria-label', 'Número do item da ata');
+    const consult = element('button', 'adhesion-button', 'Consultar saldo do item');
+    consult.type = 'button';
+    const status = element('p', 'adhesion-note', 'Buscando itens da ata…');
+    status.setAttribute('role', 'status');
+    const result = element('div', 'adhesion-results');
+    controls.append(select, manual, consult);
+    panel.append(intro, controls, status, result);
+    article.append(panel);
+    button.setAttribute('aria-expanded', 'true');
+
+    consult.addEventListener('click', async () => {
+      const item = manual.value.trim() || select.value;
+      if (!/^\d+$/.test(item)) {
+        status.textContent = 'Selecione ou informe o número do item.';
+        return;
+      }
+      consult.disabled = true;
+      status.textContent = 'Consultando o saldo do item ' + item + '…';
+      result.replaceChildren();
+      try {
+        const rows = await adesao.getBalance(ata, item, fetch);
+        status.textContent = 'Saldo publicado para o item ' + item + ' · consulta realizada agora';
+        renderBalance(result, rows);
+      } catch {
+        status.textContent = 'A consulta do saldo não respondeu. Tente novamente ou confira no Compras.gov.br.';
+      } finally {
+        consult.disabled = false;
+      }
+    });
+    try {
+      const itens = await adesao.listItems(ata, fetch);
+      select.replaceChildren();
+      select.append(element('option', '', itens.length ? 'Selecione um item' : 'Itens não localizados'));
+      itens.forEach(item => {
+        const option = element('option', '', 'Item ' + item.numeroItem + (item.descricao ? ' · ' + item.descricao.slice(0, 90) : ''));
+        option.value = item.numeroItem;
+        select.append(option);
+      });
+      select.disabled = !itens.length;
+      status.textContent = itens.length
+        ? 'Selecione um dos ' + itens.length + ' itens para ver o saldo.'
+        : 'Itens não localizados na base pública. Informe o número do item para consultar.';
+    } catch {
+      select.replaceChildren();
+      select.disabled = true;
+      status.textContent = 'A lista de itens não está disponível. Informe o número do item para consultar diretamente.';
+    }
+  }
+
   function card(ata, today) {
     const article = element('article', 'ata-row');
     const number = element('div', 'ata-number');
@@ -259,6 +359,13 @@
     const links = element('div', 'ata-action');
     links.append(element('span', 'cell-label', 'Documentos'));
     addLink(links, ata.linkAtaPNCP, ata.numeroAtaRegistroPreco);
+    if (adesao.context(ata)) {
+      const button = element('button', 'adhesion-open', 'Ver saldo de adesão por item');
+      button.type = 'button';
+      button.setAttribute('aria-expanded', 'false');
+      button.addEventListener('click', () => openBalance(ata, article, button));
+      links.append(button);
+    }
     article.append(number, validity, purchase, links);
     return article;
   }
