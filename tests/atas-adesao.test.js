@@ -82,6 +82,7 @@ test('API atual usa saldoAdesoes e repete o saldo nas unidades sem somá-lo', as
   const fetcher = async () => ({ok:true, json:async () => ({resultado:[
     {numeroAta:'00107/2026', unidadeGerenciadora:'153167', numeroItem:'00001',
       fornecedor:'12345678000190 - Fornecedor A', saldoAdesoes:40, qtdLimiteAdesao:100,
+      qtdLimiteInformadoCompra:120, codigoPdm:'10361', quantidadeRegistrada:25,
       codigoUnidade:'153167', tipoUnidade:'GERENCIADORA', aceitaAdesao:true},
     {numeroAta:'00107/2026', unidadeGerenciadora:'153167', numeroItem:'00001',
       fornecedor:'12345678000190 - Fornecedor A', saldoAdesoes:40, qtdLimiteAdesao:100,
@@ -93,6 +94,9 @@ test('API atual usa saldoAdesoes e repete o saldo nas unidades sem somá-lo', as
   assert.equal(rows[0].percentual, 40);
   assert.equal(rows[0].unidades, 2);
   assert.equal(rows[0].tipoUnidade, 'GERENCIADORA');
+  assert.equal(rows[0].registrado, 25);
+  assert.equal(rows[0].limiteCompra, 120);
+  assert.equal(rows[0].codigoItem, '10361');
 });
 
 test('consulta no proxy aceita apenas os dois endpoints oficiais de ARP', async () => {
@@ -109,6 +113,6 @@ test('consulta no proxy aceita apenas os dois endpoints oficiais de ARP', async 
 
 test('página mantém consulta opcional e origem oficial acessível', () => {
   const html = readFileSync(join(__dirname, '..', 'atas.html'), 'utf8');
-  assert.match(html, /script src="atas-adesao.js"/);
+  assert.match(html, /script src="atas-adesao.js(?:\?[^\"]+)?"/);
   assert.match(html, /connect-src[^"]*https:\/\/dadosabertos\.compras\.gov\.br/);
 });

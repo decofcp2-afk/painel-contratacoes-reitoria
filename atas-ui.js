@@ -41,11 +41,13 @@
   let organTimer;
   let organCatalog;
   let organCatalogRequest;
-  let supplierItems = [];
-  let supplierPage = 0;
-  let supplierPages = 0;
-  let supplierQuery;
-  let supplierRequest;
+  let arpItems = [];
+  let arpQuery;
+  let arpRequest;
+  let arpMode = false;
+  let arpVisible = 20;
+  let unitUpdateLabel = '';
+  const ITEMS_PER_STEP = 5;
 
   function todayInBrazil() {
     const parts = new Intl.DateTimeFormat('en-US', {timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
@@ -211,6 +213,7 @@
 
   function chooseUnit(unit) {
     if (selectedUnit.codigo === unit.codigo) { $('unit-picker').open = false; return; }
+    exitArpMode();
     clearTimeout(nationalTimer);
     if (currentRequest) currentRequest.abort();
     selectedUnit = unit;
@@ -254,7 +257,7 @@
     const qty = value => value === null ? 'não informado' : value.toLocaleString('pt-BR');
     rows.forEach(row => {
       const entry = element('div', 'adhesion-balance');
-      const heading = element('strong', '', row.descricao || 'Item consultado');
+      const heading = target.closest('.supplier-item') ? null : element('strong', '', row.descricao || 'Item consultado');
       const meta = element('span', '', [row.fornecedor && 'Fornecedor: ' + row.fornecedor,
         row.unidade && 'Unidade: ' + row.unidade,
         row.unidades > 1 && `saldo não somado entre ${row.unidades} unidades`].filter(Boolean).join(' · '));
@@ -265,7 +268,12 @@
         ? 'Saldo para adesão: ' + qty(row.saldo) + ' · percentual não disponível'
         : qty(row.saldo) + ' de ' + qty(row.limite) + ' unidades · ' +
           row.percentual.toLocaleString('pt-BR', {maximumFractionDigits:1}) + '% do limite de adesão disponível';
-      entry.append(heading, meta, element('b', 'adhesion-value', value));
+      if (heading) entry.append(heading);
+      entry.append(meta, element('b', 'adhesion-value', value));
+      if (row.registrado !== null) entry.append(element('small', '', 'Quantidade registrada na unidade: ' + qty(row.registrado)));
+      if (row.limiteCompra !== null && row.limiteCompra !== row.limite)
+        entry.append(element('small', '', 'Limite informado na compra: ' + qty(row.limiteCompra)));
+      if (row.codigoItem) entry.append(element('small', '', 'Código PDM: ' + row.codigoItem));
       if (!row.aceitaAdesao) entry.append(element('small', '', 'A origem informa que este item não aceita adesão.'));
       if (row.divergente) entry.append(element('small', '', 'Há saldos diferentes entre unidades; confira na origem.'));
       if (row.atualizadoEm) {
@@ -277,100 +285,117 @@
     });
   }
 
-  function renderSupplierResults() {
-    const target = $('supplier-results');
+  function renderArpResults() {
+    const target = $('arp-results');
+    const f = filters();
     const groups = new Map();
-    supplierItems.forEach(row => {
+    arpItems.forEach(row => {
       const key = [row.codigoUnidadeGerenciadora, row.numeroAtaRegistroPreco,
         row.numeroCompra, row.anoCompra].join('|');
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(row);
     });
     target.replaceChildren();
-    const quantity = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
-      ? Number(value).toLocaleString('pt-BR') : 'não informado';
+    let displayed = 0;
     groups.forEach(records => {
       const ata = records[0];
+      const purchase = [ata.numeroCompra, ata.anoCompra].filter(Boolean).join('/');
+      if ((f.numero && !logic.normalize(ata.numeroAtaRegistroPreco).includes(logic.normalize(f.numero))) ||
+          (f.compra && !logic.normalize(purchase).includes(logic.normalize(f.compra))) ||
+          (f.objeto && !records.some(row => logic.normalize(row.descricaoItem).includes(logic.normalize(f.objeto)))) ||
+          (f.status !== 'todos' && logic.situation(ata, todayInBrazil()) !== f.status)) return;
+      displayed++;
+      if (displayed > arpVisible) return;
+      const suppliers = new Set(records.map(row => String(row.niFornecedor || '')).filter(Boolean));
+      const itemCount = new Set(records.map(row => row.numeroItem)).size;
       const box = element('article', 'supplier-ata');
       box.append(element('h3', '', `Ata ${ata.numeroAtaRegistroPreco} · UASG ${ata.codigoUnidadeGerenciadora}`),
-        element('small', '', `Compra ${ata.numeroCompra || 'não informada'}/${ata.anoCompra || '—'} · Vigência ${formatDate(ata.dataVigenciaInicial)} a ${formatDate(ata.dataVigenciaFinal)} · ${ata.nomeRazaoSocialFornecedor || supplierQuery.cnpj}`));
-      records.sort((a, b) => Number(a.numeroItem) - Number(b.numeroItem)).forEach(row => {
-        const item = element('div', 'supplier-item');
-        const detail = element('div');
-        detail.append(element('strong', '', `Item ${row.numeroItem} · ${row.descricaoItem || 'Descrição não informada'}`),
-          element('small', '', `Quantidade homologada: ${quantity(row.quantidadeHomologadaVencedor)} · Limite máximo para adesão: ${quantity(row.maximoAdesao)}`));
-        const button = element('button', 'adhesion-button', 'Consultar saldo');
-        button.type = 'button';
-        const result = element('div', 'adhesion-results');
-        button.addEventListener('click', async () => {
-          button.disabled = true;
-          result.replaceChildren(element('p', 'adhesion-note', 'Consultando saldo na fonte oficial…'));
-          try {
-            const rows = await adesao.withDeadline(signal => adesao.getBalance(ata, row.numeroItem, adesao.proxyFetch, signal), 65000);
-            renderBalance(result, rows);
-          } catch {
-            result.replaceChildren(element('p', 'adhesion-note', 'Saldo indisponível nesta consulta. Confira o item no Contratos.gov.br.'));
-          } finally { button.disabled = false; }
-        });
-        item.append(detail, button, result);
-        box.append(item);
-      });
+        element('small', '', `Compra ${ata.numeroCompra || 'não informada'}/${ata.anoCompra || '—'} · Vigência ${formatDate(ata.dataVigenciaInicial)} a ${formatDate(ata.dataVigenciaFinal)} · ${itemCount} ${itemCount === 1 ? 'item' : 'itens'}${suppliers.size > 1 ? ' · ' + suppliers.size + ' fornecedores' : ata.nomeRazaoSocialFornecedor ? ' · ' + ata.nomeRazaoSocialFornecedor : ''}`));
+      const button = element('button', 'adhesion-open', 'Ver saldo de adesão por item');
+      button.type = 'button';
+      button.setAttribute('aria-expanded', 'false');
+      button.addEventListener('click', () => openBalance(ata, box, button, records, arpQuery.cnpj));
+      box.append(button);
       target.append(box);
     });
-    $('supplier-status').textContent = groups.size
-      ? `${groups.size} ${groups.size === 1 ? 'ata' : 'atas'} e ${supplierItems.length} ${supplierItems.length === 1 ? 'item' : 'itens'} localizados · página ${supplierPage} de ${supplierPages}. O saldo é consultado ao abrir cada item.`
-      : 'Nenhuma ata localizada para este CNPJ e ano.';
-    $('supplier-more').hidden = supplierPage >= supplierPages;
+    $('result-count').textContent = displayed
+      ? `${displayed} ${displayed === 1 ? 'ata' : 'atas'} · ${arpItems.length} ${arpItems.length === 1 ? 'item' : 'itens'} localizados`
+      : 'Nenhuma ata encontrada';
+    $('arp-status').textContent = displayed
+      ? 'Abra uma ata para consultar o saldo dos itens.'
+      : 'Nenhuma ata corresponde aos filtros. Ajuste os campos e busque novamente.';
+    $('show-more').hidden = displayed <= arpVisible;
+    $('show-more').textContent = `Mostrar mais atas (${displayed - arpVisible} restantes)`;
   }
 
-  async function loadSupplier(reset) {
-    const cnpj = reset ? $('supplier-cnpj').value.replace(/\D/g, '') : supplierQuery.cnpj;
-    const year = reset ? $('supplier-year').value : supplierQuery.year;
-    if (!/^\d{14}$/.test(cnpj)) {
-      $('supplier-status').textContent = 'Informe um CNPJ com 14 dígitos.';
-      return;
-    }
-    if (supplierRequest) supplierRequest.abort();
-    if (reset) {
-      supplierItems = [];
-      supplierPage = 0;
-      supplierPages = 0;
-      $('supplier-results').replaceChildren();
-    }
-    supplierQuery = {cnpj, year};
+  function exitArpMode() {
+    if (arpRequest) arpRequest.abort();
+    arpMode = false;
+    $('arp-results').hidden = true;
+    $('result-list').hidden = false;
+    $('arp-status').textContent = '';
+    $('updated-at').textContent = unitUpdateLabel;
+    $('coverage-text').textContent = selectedUnit.codigo === ALL_UNITS
+      ? 'Busca nacional do PNCP por objeto, situação, estado, esfera, poder e órgão, agrupada por objeto. Número da ata, ano e compra filtram somente a página exibida.'
+      : `Atas gerenciadas pela UASG ${selectedUnit.codigo}. Participações e adesões a atas de outros órgãos não estão incluídas. A unidade selecionada no painel não altera esta consulta.`;
+    render();
+    renderPagination();
+  }
+
+  async function loadArp() {
+    const cnpj = $('arp-cnpj').value.replace(/\D/g, '');
+    const uasg = $('arp-uasg').value.replace(/\D/g, '');
+    const year = $('ano').value;
+    if (!cnpj && !uasg) { $('arp-status').textContent = 'Informe o CNPJ do fornecedor ou a UASG gerenciadora.'; return; }
+    if (cnpj && !/^\d{14}$/.test(cnpj)) { $('arp-status').textContent = 'Informe um CNPJ com 14 dígitos.'; return; }
+    if (uasg && !/^\d{5,6}$/.test(uasg)) { $('arp-status').textContent = 'Informe uma UASG com 5 ou 6 dígitos.'; return; }
+    if (!/^\d{4}$/.test(year)) { $('arp-status').textContent = 'Selecione o ano da ata antes de buscar.'; $('ano').focus(); return; }
+    if (arpRequest) arpRequest.abort();
+    arpMode = true;
+    $('result-list').hidden = true;
+    $('show-more').hidden = true;
+    $('national-pagination').hidden = true;
+    $('arp-results').hidden = false;
+    $('coverage-text').textContent = 'Itens registrados no Compras.gov.br para o CNPJ e/ou a UASG informados. Os saldos são consultados ao abrir cada ata e dependem da fonte oficial.';
+    arpItems = [];
+    arpVisible = 20;
+    $('arp-results').replaceChildren();
+    $('updated-at').textContent = '';
+    arpQuery = {cnpj, uasg, year};
     const request = new AbortController();
-    supplierRequest = request;
-    $('supplier-status').textContent = 'Buscando itens registrados para este fornecedor…';
-    $('supplier-more').hidden = true;
+    arpRequest = request;
+    $('arp-status').textContent = 'Buscando atas e itens registrados…';
+    $('result-count').textContent = 'Buscando atas…';
     try {
-      const page = supplierPage + 1;
-      const data = await window.PainelGateway.chamarApi('arp.proxy', {
-        endpoint:'itens', niFornecedor:cnpj, dataVigenciaInicialMin:`${year}-01-01`,
-        dataVigenciaInicialMax:`${year}-12-31`, pagina:page, tamanhoPagina:100
-      }, {signal:request.signal});
-      if (!data.ok) throw new Error(data.erro || 'Consulta indisponível.');
-      if (!Array.isArray(data.resultado) || !Number.isInteger(data.totalPaginas) || data.totalPaginas > 20)
-        throw new Error('Resposta inesperada da consulta.');
-      if (supplierRequest !== request) return;
-      const known = new Set(supplierItems.map(row => [row.codigoUnidadeGerenciadora,
-        row.numeroAtaRegistroPreco, row.numeroItem, row.niFornecedor].join('|')));
-      data.resultado.filter(row => row && !row.itemExcluido && String(row.niFornecedor) === cnpj)
-        .forEach(row => {
-          const key = [row.codigoUnidadeGerenciadora, row.numeroAtaRegistroPreco,
-            row.numeroItem, row.niFornecedor].join('|');
-          if (!known.has(key)) { known.add(key); supplierItems.push(row); }
-        });
-      supplierPage = page;
-      supplierPages = data.totalPaginas;
-      renderSupplierResults();
+      const known = new Set();
+      for (let page = 1; page <= 20; page++) {
+        $('arp-status').textContent = `Buscando atas e itens registrados · página ${page}…`;
+        const data = await window.PainelGateway.chamarApi('arp.proxy', {
+          endpoint:'itens', ...(cnpj ? {niFornecedor:cnpj} : {}), ...(uasg ? {codigoUnidadeGerenciadora:uasg} : {}), dataVigenciaInicialMin:`${year}-01-01`,
+          dataVigenciaInicialMax:`${year}-12-31`, pagina:page, tamanhoPagina:500
+        }, {signal:request.signal});
+        if (!data.ok) throw new Error(data.erro || 'Consulta indisponível.');
+        if (!Array.isArray(data.resultado) || !Number.isInteger(data.totalPaginas) || data.totalPaginas > 20)
+          throw new Error('Resposta inesperada da consulta.');
+        if (arpRequest !== request || !arpMode) return;
+        data.resultado.filter(row => row && !row.itemExcluido && (!cnpj || String(row.niFornecedor) === cnpj) && (!uasg || String(row.codigoUnidadeGerenciadora) === uasg))
+          .forEach(row => {
+            const key = [row.codigoUnidadeGerenciadora, row.numeroAtaRegistroPreco,
+              row.numeroCompra, row.anoCompra, row.numeroItem, row.niFornecedor].join('|');
+            if (!known.has(key)) { known.add(key); arpItems.push(row); }
+          });
+        if (page >= data.totalPaginas) break;
+      }
+      renderArpResults();
+      $('updated-at').textContent = 'Consulta pública realizada agora';
     } catch (error) {
-      if (supplierRequest !== request) return;
-      $('supplier-status').textContent = `Não foi possível concluir a busca: ${error.message}. Tente novamente.`;
-      $('supplier-more').hidden = supplierPage >= supplierPages;
+      if (arpRequest !== request || !arpMode) return;
+      $('result-count').textContent = 'Consulta indisponível';
+      $('arp-status').textContent = `Não foi possível concluir a busca: ${error.message}. Tente novamente.`;
     }
   }
 
-  async function openBalance(ata, article, button) {
+  async function openBalance(ata, article, button, knownRecords, cnpj) {
     const current = article.querySelector('.ata-adhesion');
     if (current) {
       current.remove();
@@ -386,78 +411,70 @@
     official.target = '_blank';
     official.rel = 'noopener noreferrer';
     official.setAttribute('aria-label', 'Abrir consulta oficial de itens para adesão no Contratos.gov.br; pode exigir acesso gov.br');
-    const controls = element('div', 'adhesion-controls');
-    const select = element('select', 'adhesion-select');
-    select.setAttribute('aria-label', 'Selecione o item da ata');
-    select.append(element('option', '', 'Carregando itens…'));
-    const manual = element('input', 'adhesion-input');
-    manual.type = 'text';
-    manual.inputMode = 'numeric';
-    manual.pattern = '[0-9]*';
-    manual.placeholder = 'Ou informe o nº do item';
-    manual.setAttribute('aria-label', 'Número do item da ata');
-    const consult = element('button', 'adhesion-button', 'Consultar saldo do item');
-    consult.type = 'button';
     const status = element('p', 'adhesion-note', 'Buscando itens da ata…');
     status.setAttribute('role', 'status');
-    const retry = element('button', 'adhesion-retry', 'Tentar carregar itens novamente');
-    retry.type = 'button';
-    retry.hidden = true;
     const result = element('div', 'adhesion-results');
-    controls.append(select, manual, consult);
-    panel.append(intro, controls, status, retry, result, official);
+    const more = element('button', 'adhesion-retry item-more', 'Ver mais itens');
+    more.type = 'button';
+    more.hidden = true;
+    panel.append(intro, status, result, more, official);
     article.append(panel);
     button.setAttribute('aria-expanded', 'true');
-
-    consult.addEventListener('click', async () => {
-      const typed = manual.value.trim();
-      // A API de saldos distingue "4" de "00004". Preserve o código retornado pela lista.
-      const item = typed ? adesao.normalizeItem(typed, [...select.options].map(option => option.value)) : select.value;
-      if (!/^\d+$/.test(item)) {
-        status.textContent = 'Selecione ou informe o número do item.';
-        return;
-      }
-      consult.disabled = true;
-      status.textContent = 'Consultando o saldo do item ' + item + '…';
-      result.replaceChildren();
-      try {
-        const rows = await adesao.withDeadline(signal => adesao.getBalance(ata, item, adesao.proxyFetch, signal), 65000);
-        status.textContent = rows.some(row => row.saldo !== null)
-          ? 'Dados públicos para o item ' + item + ' · consulta realizada agora'
-          : 'A base pública não informa o saldo deste item. Consulte a simulação de adesão no Contratos.gov.br.';
-        renderBalance(result, rows);
-      } catch {
-        status.textContent = 'Não foi possível obter o saldo nesta consulta. Confira os quantitativos no Contratos.gov.br.';
-      } finally {
-        consult.disabled = false;
-      }
-    });
-    async function loadItems() {
-      retry.hidden = true;
-      select.disabled = true;
-      select.replaceChildren(element('option', '', 'Carregando itens…'));
-      status.textContent = 'Buscando itens da ata…';
-      try {
-        const itens = await adesao.withDeadline(signal => adesao.listItems(ata, adesao.proxyFetch, signal), 65000);
-        select.replaceChildren(element('option', '', itens.length ? 'Selecione um item' : 'Nenhum item localizado'));
-        itens.forEach(item => {
-          const option = element('option', '', 'Item ' + item.numeroItem + (item.descricao ? ' · ' + item.descricao.slice(0, 90) : ''));
-          option.value = item.numeroItem;
-          select.append(option);
-        });
-        select.disabled = !itens.length;
-        status.textContent = itens.length
-          ? 'Selecione um dos ' + itens.length + ' itens para ver o saldo.'
-          : 'Itens não localizados na base pública. Você pode informar o número do item.';
-      } catch {
-        select.replaceChildren(element('option', '', 'Lista de itens indisponível'));
-        select.disabled = true;
-        retry.hidden = false;
-        status.textContent = 'Não foi possível carregar os itens nesta consulta. Tente novamente ou consulte os itens no Contratos.gov.br.';
-      }
+    let allItems;
+    try {
+      const source = knownRecords || await adesao.withDeadline(signal => adesao.listItems(ata, adesao.proxyFetch, signal), 65000);
+      const byItem = new Map();
+      source.filter(row => /^\d+$/.test(String(row.numeroItem || ''))).forEach(row => {
+        const key = String(row.numeroItem);
+        if (!byItem.has(key)) byItem.set(key, {...row, suppliers:new Set([String(row.niFornecedor || '')])});
+        else byItem.get(key).suppliers.add(String(row.niFornecedor || ''));
+      });
+      allItems = [...byItem.values()].sort((a, b) => Number(a.numeroItem) - Number(b.numeroItem));
+    } catch {
+      if (panel.isConnected) status.textContent = 'Não foi possível carregar os itens. Feche e abra a ata para tentar novamente ou consulte o Contratos.gov.br.';
+      return;
     }
-    retry.addEventListener('click', loadItems);
-    await loadItems();
+    if (!panel.isConnected) return;
+    if (!allItems.length) { status.textContent = 'Nenhum item localizado nesta ata na base pública.'; return; }
+    let shown = 0;
+    async function showNext() {
+      more.hidden = true;
+      const batch = allItems.slice(shown, shown + ITEMS_PER_STEP);
+      shown += batch.length;
+      const slots = batch.map(row => {
+        const item = element('div', 'supplier-item');
+        item.append(element('strong', '', `Item ${row.numeroItem} · ${row.descricaoItem || row.descricao || 'Descrição não informada'}`));
+        if (row.suppliers.size > 1)
+          item.append(element('small', '', `${row.suppliers.size} fornecedores registrados neste item; saldos separados abaixo.`));
+        else if (row.quantidadeHomologadaVencedor != null || row.maximoAdesao != null)
+          item.append(element('small', '', [row.quantidadeHomologadaVencedor != null && `Quantidade homologada: ${Number(row.quantidadeHomologadaVencedor).toLocaleString('pt-BR')}`,
+            row.maximoAdesao != null && `Máximo de adesão informado na ata: ${Number(row.maximoAdesao).toLocaleString('pt-BR')}`].filter(Boolean).join(' · ')));
+        const balance = element('div', 'adhesion-results');
+        balance.append(element('p', 'adhesion-note', 'Consultando saldo na fonte oficial…'));
+        item.append(balance);
+        result.append(item);
+        return {row, balance};
+      });
+      status.textContent = `Consultando ${shown} de ${allItems.length} itens desta ata…`;
+      for (let start = 0; start < slots.length; start += 3) {
+        await Promise.all(slots.slice(start, start + 3).map(async ({row, balance}) => {
+          try {
+            const rows = await adesao.withDeadline(signal => adesao.getBalance(ata, row.numeroItem, adesao.proxyFetch, signal), 65000);
+            if (!panel.isConnected) return;
+            const matching = cnpj ? rows.filter(entry => entry.fornecedor.replace(/\D/g, '').startsWith(cnpj)) : rows;
+            renderBalance(balance, matching);
+          } catch {
+            if (panel.isConnected) balance.replaceChildren(element('p', 'adhesion-note', 'Saldo indisponível agora. Confira este item no Contratos.gov.br.'));
+          }
+        }));
+      }
+      if (!panel.isConnected) return;
+      status.textContent = `${shown} de ${allItems.length} itens exibidos · saldos consultados agora na fonte pública.`;
+      more.hidden = shown >= allItems.length;
+      more.textContent = `Ver mais itens (${allItems.length - shown} restantes)`;
+    }
+    more.addEventListener('click', showNext);
+    await showNext();
   }
 
   function card(ata, today) {
@@ -521,6 +538,8 @@
     const box = $('active-filters');
     box.replaceChildren();
     const active = fields.filter(key => f[key]).map(key => [key, `${labels[key]}: ${f[key]}`]);
+    if ($('arp-cnpj').value.trim()) active.push(['arp-cnpj', `Fornecedor: ${$('arp-cnpj').value.trim()}`]);
+    if ($('arp-uasg').value.trim()) active.push(['arp-uasg', `UASG: ${$('arp-uasg').value.trim()}`]);
     if (selectedUnit.codigo === ALL_UNITS) {
       nationalFields.filter(key => f[key]).forEach(key => active.push([key,
         `${labels[key]}: ${$(key).selectedOptions[0].textContent}`]));
@@ -533,6 +552,7 @@
       button.addEventListener('click', () => {
         if (key === 'orgao') {selectedOrgan = null; $('orgao-search').value = '';}
         else $(key).value = '';
+        if (arpMode && (key === 'arp-cnpj' || key === 'arp-uasg')) { exitArpMode(); return; }
         visible = 10;
         if ((key === 'objeto' || nationalFields.includes(key) || key === 'orgao') && selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
         else render();
@@ -572,6 +592,7 @@
     const f = filters();
     renderChips(f);
     updateNationalSearch(f);
+    if (arpMode) { renderArpResults(); return; }
     if (!loaded) return;
     const today = todayInBrazil();
     const result = logic.filterAtas(items, f, today);
@@ -605,9 +626,10 @@
     const previous = $('ano').value;
     $('ano').replaceChildren(element('option', '', 'Todos os anos'));
     $('ano').firstChild.value = '';
-    const years = selectedUnit.codigo === ALL_UNITS
-      ? Array.from({length:new Date().getFullYear() - 2020}, (_, i) => String(new Date().getFullYear() - i))
-      : [...new Set(items.map(logic.ataYear).filter(Boolean))].sort().reverse();
+    const years = [...new Set([
+      ...Array.from({length:new Date().getFullYear() - 2020}, (_, i) => String(new Date().getFullYear() - i)),
+      ...items.map(logic.ataYear).filter(Boolean)
+    ])].sort().reverse();
     years.forEach(year => {
       const option = element('option', '', year);
       option.value = year;
@@ -751,6 +773,7 @@
           {timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(payload.generatedAt));
         const delayed = Date.now() - new Date(payload.generatedAt).valueOf() > 48 * 60 * 60 * 1000;
         $('updated-at').textContent = `${payload.cached ? 'Dados atualizados' : 'Consulta realizada'} em ${stamp} (horário de Brasília)${delayed ? ' · Confira a ata no PNCP' : ''}`;
+        unitUpdateLabel = $('updated-at').textContent;
       }
       render();
       renderPagination();
@@ -786,25 +809,34 @@
 
   for (const id of fields) $(id).addEventListener(id === 'ano' ? 'change' : 'input', () => {
     visible = 10;
+    if (arpMode && id === 'ano') { exitArpMode(); return; }
+    if (arpMode) { render(); return; }
     if (id === 'objeto' && selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
     else render();
   });
   document.querySelectorAll('input[name="status"]').forEach(radio => radio.addEventListener('change', () => {
     visible = 10;
+    if (arpMode) { render(); return; }
     if (selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
     else render();
   }));
   $('clear-filters').addEventListener('click', () => {
     fields.forEach(id => {$(id).value = '';});
+    $('arp-cnpj').value = '';
+    $('arp-uasg').value = '';
     nationalFields.forEach(id => {$(id).value = '';});
     selectedOrgan = null;
     $('orgao-search').value = '';
     document.querySelector('input[name="status"][value="todos"]').checked = true;
     visible = 10;
+    if (arpMode) { exitArpMode(); return; }
     if (selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
     else render();
   });
-  $('show-more').addEventListener('click', () => {visible += 10; render();});
+  $('show-more').addEventListener('click', () => {
+    if (arpMode) {arpVisible += 20; renderArpResults();}
+    else {visible += 10; render();}
+  });
   $('previous-page').addEventListener('click', () => {if (nationalPage > 1) {nationalPage--; load();}});
   $('next-page').addEventListener('click', () => {
     if (nationalPage * PAGE_SIZE < Math.min(nationalTotal, MAX_NATIONAL_RESULTS)) {nationalPage++; load();}
@@ -818,13 +850,11 @@
   $('unit-picker').addEventListener('toggle', () => { if ($('unit-picker').open) $('unit-search').focus(); });
   $('unit-picker').addEventListener('keydown', event => { if (event.key === 'Escape') $('unit-picker').open = false; });
   document.addEventListener('click', event => { if (!$('unit-picker').contains(event.target)) $('unit-picker').open = false; });
-  for (let year = new Date().getFullYear(); year >= 2021; year--) {
-    const option = element('option', '', year);
-    option.value = String(year);
-    $('supplier-year').append(option);
-  }
-  $('supplier-form').addEventListener('submit', event => { event.preventDefault(); loadSupplier(true); });
-  $('supplier-more').addEventListener('click', () => loadSupplier(false));
+  $('arp-form').addEventListener('submit', event => { event.preventDefault(); loadArp(); });
+  ['arp-cnpj', 'arp-uasg'].forEach(id => $(id).addEventListener('input', () => {
+    if (arpMode) exitArpMode();
+    renderChips(filters());
+  }));
   renderUnitOptions();
   loadUnitCatalog();
   renderChips(filters());

@@ -8,13 +8,13 @@
   <meta name="theme-color" content="#0b1f3d">
   <meta name="description" content="Consulte atas de registro de preços por UASG, objeto e vigência, com acesso aos documentos no PNCP.">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="atas.css">
+  <link rel="stylesheet" href="atas.css?v=arp-20260925b">
   <title>Consulta de atas | Colégio Pedro II</title>
   <script src="config.js?v=arp-20260925" defer></script>
-  <script src="data-gateway.js?v=arp-20260925" defer></script>
+  <script src="data-gateway.js?v=arp-20260925b" defer></script>
   <script src="atas-logic.js" defer></script>
-  <script src="atas-adesao.js" defer></script>
-  <script src="atas-ui.js" defer></script>
+  <script src="atas-adesao.js?v=arp-20260925b" defer></script>
+  <script src="atas-ui.js?v=arp-20260925b" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -63,6 +63,13 @@
         <div class="field"><label for="ano">Ano da ata</label><select id="ano"><option value="">Todos os anos</option></select></div>
         <div class="field"><label for="compra">Número da compra</label><input id="compra" type="search" placeholder="Ex.: 90012/2025" autocomplete="off"></div>
       </div>
+      <form id="arp-form" class="arp-search" aria-label="Buscar atas por fornecedor ou unidade gerenciadora">
+        <div class="field"><label for="arp-cnpj">CNPJ do fornecedor</label><input id="arp-cnpj" inputmode="numeric" autocomplete="off" placeholder="00.000.000/0000-00"></div>
+        <div class="field"><label for="arp-uasg">Unidade gerenciadora (UASG)</label><input id="arp-uasg" inputmode="numeric" autocomplete="off" placeholder="Ex.: 153167"></div>
+        <button class="adhesion-button" type="submit">Buscar atas</button>
+        <small>Informe o CNPJ, a UASG ou ambos. Selecione o ano da ata acima para consultar os itens e saldos do Compras.gov.br.</small>
+        <p id="arp-status" class="adhesion-note" role="status" aria-live="polite"></p>
+      </form>
       <div id="national-filters" class="national-filters" hidden>
         <div class="field"><label for="uf">Estado</label><select id="uf"><option value="">Todos os estados</option><option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option><option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option><option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option><option>SE</option><option>TO</option></select></div>
         <div class="field"><label for="esfera">Esfera</label><select id="esfera"><option value="">Todas as esferas</option><option value="F">Federal</option><option value="E">Estadual</option><option value="M">Municipal</option><option value="D">Distrital</option><option value="N">Não se aplica</option></select></div>
@@ -71,22 +78,11 @@
       </div>
       <div class="filters-footer"><div id="active-filters" class="active-filters" aria-label="Filtros ativos"></div><button id="clear-filters" class="clear-button" type="button">Limpar filtros</button></div>
     </section>
-    <section class="supplier-panel" aria-labelledby="supplier-title">
-      <h2 id="supplier-title">Buscar atas pelo fornecedor</h2>
-      <p>Informe o CNPJ para localizar atas e itens registrados no Compras.gov.br. O saldo é consultado separadamente para cada item.</p>
-      <form id="supplier-form" class="supplier-form">
-        <div class="field"><label for="supplier-cnpj">CNPJ do fornecedor</label><input id="supplier-cnpj" inputmode="numeric" autocomplete="off" placeholder="00.000.000/0000-00" required></div>
-        <div class="field"><label for="supplier-year">Ano de início da ata</label><select id="supplier-year"></select></div>
-        <button class="adhesion-button" type="submit">Buscar atas</button>
-      </form>
-      <p id="supplier-status" class="adhesion-note" role="status" aria-live="polite"></p>
-      <div id="supplier-results" class="supplier-results"></div>
-      <button id="supplier-more" class="show-more" type="button" hidden>Carregar mais itens</button>
-    </section>
     <section class="results" aria-labelledby="results-title">
       <div class="results-heading"><h2 id="results-title"><span id="result-count" role="status" aria-live="polite">Carregando atas…</span></h2><p id="updated-at" class="updated-at"></p></div>
       <aside class="coverage-note"><span class="info-icon" aria-hidden="true">i</span><p id="coverage-text">Atas gerenciadas pela UASG selecionada. Participações e adesões a atas de outros órgãos não estão incluídas. A unidade selecionada no painel não altera esta consulta.</p><a id="national-search" class="national-search" href="https://pncp.gov.br/app/atas?pagina=1&amp;q=&amp;status=vigente" target="_blank" rel="noopener noreferrer" hidden>Buscar em todos os órgãos no PNCP ↗</a></aside>
       <div id="result-list" class="result-list"><div class="empty-state">Carregando atas…</div></div>
+      <div id="arp-results" class="supplier-results" hidden></div>
       <button id="show-more" class="show-more" type="button" hidden>Mostrar mais atas</button>
       <nav id="national-pagination" class="national-pagination" aria-label="Páginas das atas de todos os órgãos" hidden><button id="previous-page" type="button">← Anterior</button><span id="page-label" aria-live="polite">Página 1</span><button id="next-page" type="button">Próxima →</button></nav>
     </section>

@@ -5,8 +5,11 @@ endpoints públicos `2_consultarARPItem` e `3_consultarUnidadesItem` do módulo
 ARP do Compras.gov.br. O navegador chama o serviço com JSONP porque a API de
 Dados Abertos não envia cabeçalho CORS para o domínio do painel.
 
-O serviço aceita a busca de atas pelo **CNPJ** do fornecedor e pelo ano de
-início da vigência. O saldo é consultado para cada ata, UASG e item. A resposta
+O serviço aceita a busca de atas pelo **CNPJ** do fornecedor, pela **UASG**
+gerenciadora ou por ambos, com o ano de início da vigência. O painel agrupa os
+itens por ata e consulta os saldos dos primeiros cinco itens ao abrir a ata;
+"Ver mais itens" carrega os demais em grupos de cinco. O saldo é consultado
+para cada ata, UASG e item. A resposta
 da API pode repetir o mesmo saldo para diferentes unidades; a interface não
 soma esses registros. O resultado é informativo e deve ser conferido na origem
 antes de solicitar adesão.

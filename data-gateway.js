@@ -105,7 +105,8 @@
       return Promise.reject(e);
     }
 
-    if (!root.fetch) {
+    // O web app público do Apps Script não oferece CORS para fetch no navegador.
+    if (route === 'arp.proxy' || !root.fetch) {
       return chamarApiPainelJsonp_(route, params, options);
     }
 

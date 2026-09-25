@@ -162,6 +162,8 @@
       registrado:number(row.quantidadeRegistrada),
       saldo:number(row.saldoAdesoes ?? row.saldoAdesao),
       limite:number(row.qtdLimiteAdesao),
+      limiteCompra:number(row.qtdLimiteInformadoCompra),
+      codigoItem:String(row.codigoPdm || '').trim(),
       percentual:percentage(row),
       aceitaAdesao:row.aceitaAdesao !== false,
       atualizadoEm:String(row.dataHoraAtualizacao || '').trim()
