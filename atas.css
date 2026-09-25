@@ -132,6 +132,20 @@ h1 { margin: 0 0 6px; color: var(--navy); font-size: clamp(29px, 3.5vw, 38px); l
 .badge.nao-vigente { color: #a52238; background: #fcecef; }
 .ata-action { text-align: left; }
 .document-link { color: var(--blue); font-size: 12px; font-weight: 700; text-underline-offset: 3px; }
+.adhesion-open { display: block; margin-top: 7px; padding: 0; border: 0; background: transparent; color: var(--blue); text-align: left; text-decoration: underline; text-underline-offset: 3px; font: inherit; font-weight: 700; cursor: pointer; }
+.adhesion-open:hover { color: var(--navy); }
+.ata-adhesion { grid-column: 1 / -1; min-width: 0; padding: 14px 16px; border: 1px solid #cbdcf1; border-radius: 10px; background: #f7faff; }
+.adhesion-note { margin: 0 0 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.adhesion-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.adhesion-select, .adhesion-input { min-height: 38px; padding: 7px 10px; border: 1px solid #bfcee0; border-radius: 7px; background: #fff; color: var(--navy); font: inherit; font-size: 12px; }
+.adhesion-select { flex: 2 1 240px; min-width: 0; }
+.adhesion-input { flex: 1 1 140px; min-width: 0; }
+.adhesion-button { min-height: 38px; padding: 8px 12px; border: 0; border-radius: 7px; background: var(--blue); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.adhesion-button:disabled { opacity: .6; cursor: wait; }
+.adhesion-balance { display: grid; gap: 5px; margin-top: 8px; padding: 12px; border: 1px solid #d9e4f1; border-radius: 8px; background: #fff; color: var(--navy); line-height: 1.4; }
+.adhesion-balance span, .adhesion-balance small { color: var(--muted); font-size: 11px; }
+.adhesion-value { color: #126045; font-size: 13px; }
+.adhesion-open:focus-visible, .adhesion-select:focus-visible, .adhesion-input:focus-visible, .adhesion-button:focus-visible { outline: 3px solid #95bdf2; outline-offset: 2px; }
 .missing-link { color: var(--muted); font-size: 11px; }
 .cell-label { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .empty-state { padding: 38px 20px; border: 1px dashed var(--line); border-radius: 9px; color: var(--muted); background: #fff; text-align: center; line-height: 1.5; }
@@ -187,6 +201,8 @@ h1 { margin: 0 0 6px; color: var(--navy); font-size: clamp(29px, 3.5vw, 38px); l
   .ata-validity { display: block; }
   .ata-validity .badge { display: table; margin-top: 5px; }
   .ata-action { grid-column: 1 / -1; }
+  .ata-adhesion { padding: 12px; }
+  .adhesion-controls > * { flex-basis: 100%; }
 }
 @media (max-width: 360px) {
   .brand-logo { width: 46px; height: 36px; }
