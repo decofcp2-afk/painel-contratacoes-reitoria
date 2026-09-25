@@ -280,6 +280,11 @@
     panel.setAttribute('aria-label', 'Saldo para adesão por item');
     const intro = element('p', 'adhesion-note',
       'O saldo é por item e corresponde ao limite informado no Compras.gov.br. A disponibilidade para sua unidade depende da análise do pedido.');
+    const official = element('a', 'document-link', 'Consultar os itens no Contratos.gov.br ↗');
+    official.href = 'https://contratos.sistema.gov.br/arp/adesao/create';
+    official.target = '_blank';
+    official.rel = 'noopener noreferrer';
+    official.setAttribute('aria-label', 'Abrir consulta oficial de itens para adesão no Contratos.gov.br; pode exigir acesso gov.br');
     const controls = element('div', 'adhesion-controls');
     const select = element('select', 'adhesion-select');
     select.setAttribute('aria-label', 'Selecione o item da ata');
@@ -299,7 +304,7 @@
     retry.hidden = true;
     const result = element('div', 'adhesion-results');
     controls.append(select, manual, consult);
-    panel.append(intro, controls, status, retry, result);
+    panel.append(intro, controls, status, retry, result, official);
     article.append(panel);
     button.setAttribute('aria-expanded', 'true');
 
@@ -321,7 +326,7 @@
           : 'A base pública não informa o saldo deste item. Consulte a simulação de adesão no Contratos.gov.br.';
         renderBalance(result, rows);
       } catch {
-        status.textContent = 'Não foi possível obter o saldo na API pública. O percentual não está disponível agora; tente novamente mais tarde ou confira no Compras.gov.br.';
+        status.textContent = 'Não foi possível obter o saldo nesta consulta. Confira os quantitativos no Contratos.gov.br.';
       } finally {
         consult.disabled = false;
       }
@@ -347,7 +352,7 @@
         select.replaceChildren(element('option', '', 'Lista de itens indisponível'));
         select.disabled = true;
         retry.hidden = false;
-        status.textContent = 'A API pública não retornou os itens desta ata. Você pode tentar novamente ou informar o número do item; o saldo também depende da API.';
+        status.textContent = 'Não foi possível carregar os itens nesta consulta. Tente novamente ou consulte os itens no Contratos.gov.br.';
       }
     }
     retry.addEventListener('click', loadItems);

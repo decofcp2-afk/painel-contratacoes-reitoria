@@ -1657,28 +1657,16 @@ function restaurarFiltros() {
 carregarDados();
 
 // ════════════════════════════════════════════════════════════════
-// SCROLL SYNC — sincroniza scroll vertical entre coluna de nomes e barras
+// SCROLL — a página rola verticalmente; o cronograma mantém a rolagem horizontal
 // ════════════════════════════════════════════════════════════════
-// O painel esquerdo (gl-panel-body) tem overflow:hidden e não rola sozinho.
-// Quando o usuário roda o mouse sobre ele, propagamos o delta para o
-// painel direito (gr-panel-body), que tem overflow:auto e faz o scroll real.
-// O evento de scroll do gr-panel-body atualiza o scrollTop do gl-panel-body
-// para que os nomes fiquem sempre alinhados às barras correspondentes.
 (function() {
-  var glBody = document.getElementById('gl-panel-body');
   var grBody = document.getElementById('gr-panel-body');
-  if (!glBody || !grBody) return;
+  var header = document.getElementById('gantt-header');
+  if (!grBody) return;
 
-  // Scroll real ocorre no grBody; gl-panel-body espelha o scrollTop
   grBody.addEventListener('scroll', function() {
-    glBody.scrollTop = grBody.scrollTop;
+    if (header) header.style.transform = 'translateX(' + (-grBody.scrollLeft) + 'px)';
     repositionTodayLine();
   });
-
-  // Roda do mouse sobre a coluna de nomes → propaga para grBody
-  glBody.addEventListener('wheel', function(ev) {
-    ev.preventDefault();
-    grBody.scrollTop += ev.deltaY;
-    grBody.scrollLeft += ev.deltaX;
-  }, { passive: false });
+  window.addEventListener('scroll', repositionTodayLine, {passive:true});
 })();

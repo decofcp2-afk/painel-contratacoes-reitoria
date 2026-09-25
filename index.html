@@ -116,10 +116,9 @@
 }
 /* Reset básico: remove margens e paddings padrão do navegador */
 *{box-sizing:border-box;margin:0;padding:0}
-/* html e body ocupam 100% da altura, permitindo o layout full-height */
-html,body{height:100%}
-/* body como coluna flex: header fixo → conteúdo flexível → footer fixo */
-body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden}
+/* A página inteira rola; o cronograma cresce conforme os processos. */
+html,body{min-height:100%}
+body{display:flex;flex-direction:column;min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--sans);overflow-x:hidden}
 /* Scrollbar fina e discreta nos navegadores WebKit (Chrome, Edge, Safari) */
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:var(--s1)}
@@ -131,10 +130,9 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 }
 
 /* ─────────────────────────────────────────────────────────────
-   HEADER — barra superior fixa com logo, título e botão Atualizar
+   HEADER — barra superior com logo, título e ações
    O gradiente de branco para azul CPII simula a identidade visual
-   institucional. position:sticky + z-index:200 garante que ele
-   fique sempre acima do Gantt ao rolar.
+   institucional.
    ───────────────────────────────────────────────────────────── */
 /* ── HEADER ── */
 .top-bar{
@@ -142,7 +140,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
   padding:0 20px;height:60px;
   background:linear-gradient(90deg,#fff 0%,#e8f0fa 30%,#c2d8f0 50%,#7aaad8 70%,#1e4e8c 100%);
   border-bottom:1px solid rgba(201,162,42,.25);
-  position:sticky;top:0;z-index:200;
+  position:relative;z-index:200;
   box-shadow:0 2px 12px rgba(0,0,0,.4);
   flex-shrink:0;
 }
@@ -316,13 +314,11 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 /* ─────────────────────────────────────────────────────────────
    GANTT — estrutura da tabela de cronograma
    Layout hierárquico:
-     .main          → contêiner flex-coluna que ocupa o espaço restante
-     .gantt-outer   → scroll vertical+horizontal (overflow:auto)
-                      também é flex-coluna para empurrar o footer para baixo
-     .gantt-table   → tabela real com linhas e colunas (construída pelo JS)
+     .main          → contêiner que acompanha o crescimento da página
+     .gantt-body    → nomes e barras lado a lado
+     .gr-panel-body → rolagem horizontal dos meses
 
    CABEÇALHO DE MESES (.gh-wrap)
-     Fica "grudado" no topo do scroll (position:sticky; top:0; z-index:100).
      Dividido em anos (.gh-year) → meses (.gh-mo).
      O mês atual recebe a classe "cur-mo" com destaque dourado.
 
@@ -358,18 +354,18 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
    Coluna esquerda (nomes) fixa + painel direito (barras) com scroll.
    Isso evita o bug do sticky horizontal e mantém os nomes visíveis.
    ══════════════════════════════════════════════════════════════ */
-.main{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:12px 20px 8px 20px;background:var(--bg)}
-.gantt-card{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--s1);border:1px solid var(--border2);border-radius:14px;box-shadow:0 4px 18px rgba(30,78,140,.10);overflow:hidden}
+.main{display:flex;flex-direction:column;flex:1;padding:12px 20px 8px 20px;background:var(--bg)}
+.gantt-card{display:flex;flex-direction:column;background:var(--s1);border:1px solid var(--border2);border-radius:14px;box-shadow:0 4px 18px rgba(30,78,140,.10);overflow:hidden}
 
 /* Corpo do Gantt: linha horizontal com painel-E (nomes) + painel-D (barras) */
-.gantt-body{flex:1;min-height:0;display:flex;overflow:hidden;border-radius:0 0 14px 14px}
+.gantt-body{display:flex;border-radius:0 0 14px 14px}
 
 /* PAINEL ESQUERDO — coluna de nomes, largura fixa, sem scroll horizontal */
 .gl-panel{width:var(--label-w);min-width:var(--label-w);flex-shrink:0;display:flex;flex-direction:column;border-right:2px solid var(--border2);background:var(--s2);z-index:10;transition:width .2s ease,min-width .2s ease}
 .gl-panel-hdr{height:var(--hdr-h);display:flex;align-items:center;padding:0 20px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);background:var(--s2);border-bottom:2px solid var(--border2);flex-shrink:0}
 .gl-panel-body::-webkit-scrollbar{display:none}
 .gl-panel-body{
-  flex:1;overflow-y:scroll;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;
+  overflow:visible;
   background-color:var(--s2);
   background-image:repeating-linear-gradient(
     to bottom,
@@ -389,7 +385,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
    1) linhas horizontais — cobrem 100% da largura sempre (grade de linhas de processo)
    2) linhas verticais tracejadas — via CSS vars setadas pelo JS: cobertas até barsW */
 .gr-panel-body{
-  flex:1;overflow:auto;position:relative;
+  flex:1;overflow-x:auto;overflow-y:hidden;position:relative;
   background-color:var(--s2);
   background-image:
     repeating-linear-gradient(
@@ -546,10 +542,8 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 .pbar-pct{font-family:var(--mono);font-size:11px;font-weight:600;min-width:30px;text-align:right}
 /* ─────────────────────────────────────────────────────────────
    FOOTER — rodapé institucional com nome, endereço e ramais
-   Fica dentro de .gantt-outer (flex-coluna). O div espaçador com
-   margin-top:auto antes do footer empurra-o sempre para o final
-   do conteúdo, sem sobrepor as linhas do Gantt.
-   Altura fixa de 62px (min/max/height iguais) garante que ele
+   Fica após o cronograma no fluxo natural da página.
+   Altura fixa de 54px (min/max/height iguais) garante que ele
    não mude de tamanho ao filtrar processos.
    Para atualizar os ramais, edite os <span class="footer-ramal">
    no HTML abaixo.
@@ -1021,14 +1015,7 @@ body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);f
 </div>
 
 <!--
-  ÁREA DO GANTT
-  .main → coluna flex que ocupa todo o espaço vertical restante
-  .gantt-outer → área com scroll (vertical e horizontal) que contém:
-    - #gantt-table → preenchido dinamicamente pelo JS (render())
-    - div espaçador → margin-top:auto empurra o footer para baixo
-    - .footer → rodapé institucional de altura fixa (62px)
-  Importante: gantt-outer é display:flex flex-direction:column.
-  Isso é necessário para o margin-top:auto do espaçador funcionar.
+  ÁREA DO GANTT: a página rola na vertical e as barras rolam na horizontal.
 -->
 <!-- GANTT -->
 <div class="main">
