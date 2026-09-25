@@ -2,7 +2,7 @@ const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {readFileSync} = require('node:fs');
 const {join} = require('node:path');
-const {context, normalizeItem, percentage, withDeadline, listItems, getBalance, getApprovals, proxyFetch} = require('../atas-adesao');
+const {context, normalizeItem, percentage, availability, withDeadline, listItems, getBalance, getApprovals, proxyFetch} = require('../atas-adesao');
 
 const ata = {
   numeroAtaRegistroPreco:'00107/2026', codigoUnidadeGerenciadora:'153167',
@@ -114,6 +114,16 @@ test('adesões aprovadas são somadas por item sem misturar outra ata', async ()
   const approvals = await getApprovals(ata, '00001', fetcher);
   assert.equal(approvals.total, 10);
   assert.equal(approvals.byUnit.get('123456'), 10);
+});
+
+test('tag da ata só informa ausência de saldo após conferir todos os itens', () => {
+  assert.equal(availability({balances:[], checked:0, total:2}), 'pending');
+  assert.equal(availability({balances:[{saldo:0, aceitaAdesao:true}], checked:1, total:2}), 'pending');
+  assert.equal(availability({balances:[{saldo:0, aceitaAdesao:true}], checked:2, total:2}), 'unavailable');
+  assert.equal(availability({balances:[{saldo:10, aceitaAdesao:false}], checked:1, total:1}), 'unavailable');
+  assert.equal(availability({balances:[{saldo:10, aceitaAdesao:true}], checked:1, total:2}), 'available');
+  assert.equal(availability({balances:[], checked:2, total:2, failed:1}), 'unknown');
+  assert.equal(availability({balances:[{saldo:0, aceitaAdesao:true}], checked:2, total:2, missing:1}), 'unknown');
 });
 
 test('consulta no proxy aceita apenas endpoints oficiais de ARP', async () => {

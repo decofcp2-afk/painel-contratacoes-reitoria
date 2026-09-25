@@ -58,6 +58,13 @@
     return balance / limit * 100;
   }
 
+  function availability({balances = [], checked = 0, total = 0, failed = 0, missing = 0}) {
+    if (balances.some(row => row.aceitaAdesao && row.saldo !== null && row.saldo > 0)) return 'available';
+    if (!Number.isInteger(total) || total < 1) return 'unknown';
+    if (checked < total) return 'pending';
+    return failed || missing ? 'unknown' : 'unavailable';
+  }
+
   async function withDeadline(task, timeoutMs) {
     const controller = new AbortController();
     let timer;
@@ -206,5 +213,5 @@
     return {total, byUnit};
   }
 
-  return {context, identity, normalizeItem, percentage, withDeadline, listItems, getBalance, getApprovals, proxyFetch};
+  return {context, identity, normalizeItem, percentage, availability, withDeadline, listItems, getBalance, getApprovals, proxyFetch};
 });

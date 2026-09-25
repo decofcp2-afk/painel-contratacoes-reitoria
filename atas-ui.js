@@ -285,6 +285,31 @@
     });
   }
 
+  function setAvailability(article, state, cnpj = '') {
+    const badge = article.querySelector('.adhesion-status');
+    if (!badge) return;
+    const labels = {
+      unverified:'Saldo a consultar',
+      loading:'Consultando saldo…',
+      pending:'Demais itens a consultar',
+      available:'Adesão: há saldo',
+      unavailable:'Adesão: sem saldo',
+      unknown:'Saldo não confirmado'
+    };
+    badge.className = `adhesion-status ${state}`;
+    badge.textContent = labels[state];
+    badge.title = state === 'available'
+      ? `Há saldo positivo em pelo menos um item que aceita adesão${cnpj ? ' para o fornecedor pesquisado' : ''}. Confira a vigência e as condições do pedido.`
+      : state === 'unavailable'
+      ? `Todos os itens foram consultados e nenhum apresentou saldo positivo para adesão${cnpj ? ' para o fornecedor pesquisado' : ''}.`
+      : 'Abra a consulta dos itens para verificar o saldo na fonte oficial.';
+    article.dataset.adhesionAvailability = state;
+  }
+
+  function availabilityBadge() {
+    return element('span', 'adhesion-status unverified', 'Saldo a consultar');
+  }
+
   function renderArpResults() {
     const target = $('arp-results');
     const f = filters();
@@ -309,7 +334,9 @@
       const suppliers = new Set(records.map(row => String(row.niFornecedor || '')).filter(Boolean));
       const itemCount = new Set(records.map(row => row.numeroItem)).size;
       const box = element('article', 'supplier-ata');
-      box.append(element('h3', '', `Ata ${ata.numeroAtaRegistroPreco} · UASG ${ata.codigoUnidadeGerenciadora}`),
+      const heading = element('div', 'supplier-heading');
+      heading.append(element('h3', '', `Ata ${ata.numeroAtaRegistroPreco} · UASG ${ata.codigoUnidadeGerenciadora}`), availabilityBadge());
+      box.append(heading,
         element('small', '', `Compra ${ata.numeroCompra || 'não informada'}/${ata.anoCompra || '—'} · Vigência ${formatDate(ata.dataVigenciaInicial)} a ${formatDate(ata.dataVigenciaFinal)} · ${itemCount} ${itemCount === 1 ? 'item' : 'itens'}${suppliers.size > 1 ? ' · ' + suppliers.size + ' fornecedores' : ata.nomeRazaoSocialFornecedor ? ' · ' + ata.nomeRazaoSocialFornecedor : ''}`));
       const button = element('button', 'adhesion-open', 'Ver saldo de adesão por item');
       button.type = 'button';
@@ -400,12 +427,15 @@
     if (current) {
       current.remove();
       button.setAttribute('aria-expanded', 'false');
+      if (['loading', 'pending'].includes(article.dataset.adhesionAvailability))
+        setAvailability(article, 'unverified', cnpj);
       return;
     }
+    setAvailability(article, 'loading', cnpj);
     const panel = element('section', 'ata-adhesion');
     panel.setAttribute('aria-label', 'Saldo para adesão por item');
     const intro = element('p', 'adhesion-note',
-      'O saldo é por item e corresponde ao limite informado no Compras.gov.br. A disponibilidade para sua unidade depende da análise do pedido.');
+      'O saldo é por item e corresponde ao limite informado no Compras.gov.br. A adesão depende da vigência da ata e da análise do pedido para sua unidade.');
     const official = element('a', 'document-link', 'Consultar os itens no Contratos.gov.br ↗');
     official.href = 'https://contratos.sistema.gov.br/arp/adesao/create';
     official.target = '_blank';
@@ -432,13 +462,19 @@
       allItems = [...byItem.values()].sort((a, b) => Number(a.numeroItem) - Number(b.numeroItem));
     } catch {
       if (panel.isConnected) status.textContent = 'Não foi possível carregar os itens. Feche e abra a ata para tentar novamente ou consulte o Contratos.gov.br.';
+      if (panel.isConnected) setAvailability(article, 'unknown', cnpj);
       return;
     }
     if (!panel.isConnected) return;
-    if (!allItems.length) { status.textContent = 'Nenhum item localizado nesta ata na base pública.'; return; }
+    if (!allItems.length) { status.textContent = 'Nenhum item localizado nesta ata na base pública.'; setAvailability(article, 'unknown', cnpj); return; }
     let shown = 0;
+    let checked = 0;
+    let failed = 0;
+    let missing = 0;
+    const balances = [];
     async function showNext() {
       more.hidden = true;
+      if (article.dataset.adhesionAvailability !== 'available') setAvailability(article, 'loading', cnpj);
       const batch = allItems.slice(shown, shown + ITEMS_PER_STEP);
       shown += batch.length;
       const slots = batch.map(row => {
@@ -469,7 +505,14 @@
           if (saldo.status === 'fulfilled') {
             const matching = cnpj ? saldo.value.filter(entry => entry.fornecedor.replace(/\D/g, '').startsWith(cnpj)) : saldo.value;
             renderBalance(balance, matching);
-          } else balance.replaceChildren(element('p', 'adhesion-note', 'Saldo indisponível agora. Confira este item no Contratos.gov.br.'));
+            balances.push(...matching);
+            if (!matching.length) missing++;
+          } else {
+            failed++;
+            balance.replaceChildren(element('p', 'adhesion-note', 'Saldo indisponível agora. Confira este item no Contratos.gov.br.'));
+          }
+          checked++;
+          setAvailability(article, adesao.availability({balances, checked, total:allItems.length, failed, missing}), cnpj);
           if (approvals.status === 'fulfilled')
             balance.append(element('small', 'adhesion-approvals', 'Adesões aprovadas globalmente para o item: ' + approvals.value.total.toLocaleString('pt-BR')));
           else balance.append(element('small', 'adhesion-approvals', 'Detalhamento de adesões aprovadas indisponível nesta consulta.'));
@@ -477,6 +520,7 @@
       }
       if (!panel.isConnected) return;
       status.textContent = `${shown} de ${allItems.length} itens exibidos · saldos consultados agora na fonte pública.`;
+      setAvailability(article, adesao.availability({balances, checked, total:allItems.length, failed, missing}), cnpj);
       more.hidden = shown >= allItems.length;
       more.textContent = `Ver mais itens (${allItems.length - shown} restantes)`;
     }
@@ -488,6 +532,7 @@
     const article = element('article', 'ata-row');
     const number = element('div', 'ata-number');
     number.append(element('span', 'cell-label', 'Ata'), element('strong', '', ata.numeroAtaRegistroPreco || 'Sem número'));
+    if (adesao.context(ata)) number.append(availabilityBadge());
     if (selectedUnit.codigo === ALL_UNITS) {
       const code = String(ata.codigoUnidadeGerenciadora || '');
       number.append(element('small', 'ata-unit',
