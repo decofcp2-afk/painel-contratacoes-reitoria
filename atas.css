@@ -104,22 +104,10 @@ h1 { margin: 0 0 6px; color: var(--navy); font-size: clamp(29px, 3.5vw, 38px); l
 .clear-button:hover { text-decoration: underline; }
 
 .results { margin-top: 28px; }
-.arp-search { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)) auto; align-items: end; gap: 12px; margin-top: 18px; padding-top: 18px; border-top: 1px solid #e7edf5; }
-.arp-search .adhesion-button { min-height: 43px; }
-.arp-search small { grid-column: 1 / -1; color: var(--muted); font-size: 11px; }
-.arp-search .adhesion-note { grid-column: 1 / -1; margin: 0; }
-.arp-search .adhesion-note:empty { display: none; }
-.supplier-results { display: grid; gap: 10px; }
-.supplier-results[hidden] { display: none; }
-.supplier-ata { padding: 15px; border: 1px solid #d8e4f2; border-radius: 9px; background: #f8fbff; }
-.supplier-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-bottom: 5px; }
-.supplier-ata h3 { margin: 0; color: var(--navy); font-size: 14px; }
-.supplier-ata > small { color: var(--muted); }
 .supplier-item { padding: 11px 0; border-top: 1px solid var(--line); font-size: 12px; }
 .supplier-item:first-of-type { margin-top: 9px; }
 .supplier-item strong, .supplier-item small { display: block; }
 .supplier-item small { margin-top: 4px; color: var(--muted); }
-.supplier-ata .adhesion-open { margin-top: 12px; }
 .item-more { margin-top: 10px; }
 .results-heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 16px; }
 .results-heading h2 { margin: 0; color: var(--navy); font-size: 21px; letter-spacing: -.35px; }
@@ -151,7 +139,6 @@ h1 { margin: 0 0 6px; color: var(--navy); font-size: clamp(29px, 3.5vw, 38px); l
 .ata-row > div { min-width: 0; }
 .ata-number strong { color: var(--navy); font-size: 13px; }
 .adhesion-status { display: table; max-width: 100%; margin-top: 5px; padding: 3px 7px; border-radius: 5px; background: #edf2f7; color: var(--muted); font-size: 10px; font-weight: 700; line-height: 1.3; }
-.supplier-heading .adhesion-status { margin-top: 0; }
 .adhesion-status.loading, .adhesion-status.pending { background: #fff4d9; color: #78551b; }
 .adhesion-status.available { background: #e5f5eb; color: #087648; }
 .adhesion-status.unavailable { background: #fcecef; color: #a52238; }
@@ -198,8 +185,6 @@ h1 { margin: 0 0 6px; color: var(--navy); font-size: clamp(29px, 3.5vw, 38px); l
   .date-range { white-space: normal; }
 }
 @media (max-width: 650px) {
-  .arp-search { grid-template-columns: 1fr; }
-  .arp-search small, .arp-search .adhesion-note { grid-column: 1; }
   .container { width: calc(100% - 28px); }
   .topbar-inner { min-height: 62px; }
   .brand-logo { width: 53px; height: 42px; }

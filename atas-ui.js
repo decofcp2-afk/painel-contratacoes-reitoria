@@ -41,12 +41,6 @@
   let organTimer;
   let organCatalog;
   let organCatalogRequest;
-  let arpItems = [];
-  let arpQuery;
-  let arpRequest;
-  let arpMode = false;
-  let arpVisible = 20;
-  let unitUpdateLabel = '';
   const ITEMS_PER_STEP = 5;
 
   function todayInBrazil() {
@@ -213,7 +207,6 @@
 
   function chooseUnit(unit) {
     if (selectedUnit.codigo === unit.codigo) { $('unit-picker').open = false; return; }
-    exitArpMode();
     clearTimeout(nationalTimer);
     if (currentRequest) currentRequest.abort();
     selectedUnit = unit;
@@ -251,7 +244,7 @@
   function renderBalance(target, rows) {
     target.replaceChildren();
     if (!rows.length) {
-      target.append(element('p', 'adhesion-note', 'Não há saldo de adesão publicado para este item. Confira a ata no Compras.gov.br.'));
+      target.append(element('p', 'adhesion-note', 'Não há saldo global de adesão publicado para este item. Confira a ata no Compras.gov.br.'));
       return;
     }
     const qty = value => value === null ? 'não informado' : value.toLocaleString('pt-BR');
@@ -263,11 +256,11 @@
         row.unidades > 1 && `saldo não somado entre ${row.unidades} unidades`].filter(Boolean).join(' · '));
       const invalid = row.saldo !== null && row.limite !== null && row.saldo > row.limite;
       const value = invalid
-        ? 'Saldo: ' + qty(row.saldo) + ' · limite: ' + qty(row.limite) + ' · dados divergentes; confira na origem'
+        ? 'Saldo global: ' + qty(row.saldo) + ' · limite global: ' + qty(row.limite) + ' · dados divergentes; confira na origem'
         : row.percentual === null
-        ? 'Saldo para adesão: ' + qty(row.saldo) + ' · percentual não disponível'
-        : qty(row.saldo) + ' de ' + qty(row.limite) + ' unidades · ' +
-          row.percentual.toLocaleString('pt-BR', {maximumFractionDigits:1}) + '% do limite de adesão disponível';
+        ? 'Saldo global para adesões: ' + qty(row.saldo) + ' · percentual não disponível'
+        : 'Saldo global para adesões: ' + qty(row.saldo) + ' de ' + qty(row.limite) + ' unidades · ' +
+          row.percentual.toLocaleString('pt-BR', {maximumFractionDigits:1}) + '% do limite global disponível';
       if (heading) entry.append(heading);
       entry.append(meta, element('b', 'adhesion-value', value));
       if (row.registrado !== null) entry.append(element('small', '', 'Quantidade registrada na unidade: ' + qty(row.registrado)));
@@ -285,23 +278,23 @@
     });
   }
 
-  function setAvailability(article, state, cnpj = '') {
+  function setAvailability(article, state) {
     const badge = article.querySelector('.adhesion-status');
     if (!badge) return;
     const labels = {
       unverified:'Saldo a consultar',
       loading:'Consultando saldo…',
       pending:'Demais itens a consultar',
-      available:'Adesão: há saldo',
-      unavailable:'Adesão: sem saldo',
+      available:'Adesão: há saldo global',
+      unavailable:'Adesão: sem saldo global',
       unknown:'Saldo não confirmado'
     };
     badge.className = `adhesion-status ${state}`;
     badge.textContent = labels[state];
     badge.title = state === 'available'
-      ? `Há saldo positivo em pelo menos um item que aceita adesão${cnpj ? ' para o fornecedor pesquisado' : ''}. Confira a vigência e as condições do pedido.`
+      ? 'Há saldo global positivo em pelo menos um item que aceita adesão. A quantidade individual disponível pode ser menor; confira no Contratos.gov.br.'
       : state === 'unavailable'
-      ? `Todos os itens foram consultados e nenhum apresentou saldo positivo para adesão${cnpj ? ' para o fornecedor pesquisado' : ''}.`
+      ? 'Todos os itens foram consultados e nenhum apresentou saldo global positivo para adesão.'
       : 'Abra a consulta dos itens para verificar o saldo na fonte oficial.';
     article.dataset.adhesionAvailability = state;
   }
@@ -310,132 +303,20 @@
     return element('span', 'adhesion-status unverified', 'Saldo a consultar');
   }
 
-  function renderArpResults() {
-    const target = $('arp-results');
-    const f = filters();
-    const groups = new Map();
-    arpItems.forEach(row => {
-      const key = [row.codigoUnidadeGerenciadora, row.numeroAtaRegistroPreco,
-        row.numeroCompra, row.anoCompra].join('|');
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(row);
-    });
-    target.replaceChildren();
-    let displayed = 0;
-    groups.forEach(records => {
-      const ata = records[0];
-      const purchase = [ata.numeroCompra, ata.anoCompra].filter(Boolean).join('/');
-      if ((f.numero && !logic.normalize(ata.numeroAtaRegistroPreco).includes(logic.normalize(f.numero))) ||
-          (f.compra && !logic.normalize(purchase).includes(logic.normalize(f.compra))) ||
-          (f.objeto && !records.some(row => logic.normalize(row.descricaoItem).includes(logic.normalize(f.objeto)))) ||
-          (f.status !== 'todos' && logic.situation(ata, todayInBrazil()) !== f.status)) return;
-      displayed++;
-      if (displayed > arpVisible) return;
-      const suppliers = new Set(records.map(row => String(row.niFornecedor || '')).filter(Boolean));
-      const itemCount = new Set(records.map(row => row.numeroItem)).size;
-      const box = element('article', 'supplier-ata');
-      const heading = element('div', 'supplier-heading');
-      heading.append(element('h3', '', `Ata ${ata.numeroAtaRegistroPreco} · UASG ${ata.codigoUnidadeGerenciadora}`), availabilityBadge());
-      box.append(heading,
-        element('small', '', `Compra ${ata.numeroCompra || 'não informada'}/${ata.anoCompra || '—'} · Vigência ${formatDate(ata.dataVigenciaInicial)} a ${formatDate(ata.dataVigenciaFinal)} · ${itemCount} ${itemCount === 1 ? 'item' : 'itens'}${suppliers.size > 1 ? ' · ' + suppliers.size + ' fornecedores' : ata.nomeRazaoSocialFornecedor ? ' · ' + ata.nomeRazaoSocialFornecedor : ''}`));
-      const button = element('button', 'adhesion-open', 'Ver saldo de adesão por item');
-      button.type = 'button';
-      button.setAttribute('aria-expanded', 'false');
-      button.addEventListener('click', () => openBalance(ata, box, button, records, arpQuery.cnpj));
-      box.append(button);
-      target.append(box);
-    });
-    $('result-count').textContent = displayed
-      ? `${displayed} ${displayed === 1 ? 'ata' : 'atas'} · ${arpItems.length} ${arpItems.length === 1 ? 'item' : 'itens'} localizados`
-      : 'Nenhuma ata encontrada';
-    $('arp-status').textContent = displayed
-      ? 'Abra uma ata para consultar o saldo dos itens.'
-      : 'Nenhuma ata corresponde aos filtros. Ajuste os campos e busque novamente.';
-    $('show-more').hidden = displayed <= arpVisible;
-    $('show-more').textContent = `Mostrar mais atas (${displayed - arpVisible} restantes)`;
-  }
-
-  function exitArpMode() {
-    if (arpRequest) arpRequest.abort();
-    arpMode = false;
-    $('arp-results').hidden = true;
-    $('result-list').hidden = false;
-    $('arp-status').textContent = '';
-    $('updated-at').textContent = unitUpdateLabel;
-    $('coverage-text').textContent = selectedUnit.codigo === ALL_UNITS
-      ? 'Busca nacional do PNCP por objeto, situação, estado, esfera, poder e órgão, agrupada por objeto. Número da ata, ano e compra filtram somente a página exibida.'
-      : `Atas gerenciadas pela UASG ${selectedUnit.codigo}. Participações e adesões a atas de outros órgãos não estão incluídas. A unidade selecionada no painel não altera esta consulta.`;
-    render();
-    renderPagination();
-  }
-
-  async function loadArp() {
-    const cnpj = $('arp-cnpj').value.replace(/\D/g, '');
-    const uasg = $('arp-uasg').value.replace(/\D/g, '');
-    const year = $('ano').value;
-    if (!cnpj && !uasg) { $('arp-status').textContent = 'Informe o CNPJ do fornecedor ou a UASG gerenciadora.'; return; }
-    if (cnpj && !/^\d{14}$/.test(cnpj)) { $('arp-status').textContent = 'Informe um CNPJ com 14 dígitos.'; return; }
-    if (uasg && !/^\d{5,6}$/.test(uasg)) { $('arp-status').textContent = 'Informe uma UASG com 5 ou 6 dígitos.'; return; }
-    if (!/^\d{4}$/.test(year)) { $('arp-status').textContent = 'Selecione o ano da ata antes de buscar.'; $('ano').focus(); return; }
-    if (arpRequest) arpRequest.abort();
-    arpMode = true;
-    $('result-list').hidden = true;
-    $('show-more').hidden = true;
-    $('national-pagination').hidden = true;
-    $('arp-results').hidden = false;
-    $('coverage-text').textContent = 'Itens registrados no Compras.gov.br para o CNPJ e/ou a UASG informados. Os saldos são consultados ao abrir cada ata e dependem da fonte oficial.';
-    arpItems = [];
-    arpVisible = 20;
-    $('arp-results').replaceChildren();
-    $('updated-at').textContent = '';
-    arpQuery = {cnpj, uasg, year};
-    const request = new AbortController();
-    arpRequest = request;
-    $('arp-status').textContent = 'Buscando atas e itens registrados…';
-    $('result-count').textContent = 'Buscando atas…';
-    try {
-      const known = new Set();
-      for (let page = 1; page <= 20; page++) {
-        $('arp-status').textContent = `Buscando atas e itens registrados · página ${page}…`;
-        const data = await window.PainelGateway.chamarApi('arp.proxy', {
-          endpoint:'itens', ...(cnpj ? {niFornecedor:cnpj} : {}), ...(uasg ? {codigoUnidadeGerenciadora:uasg} : {}), dataVigenciaInicialMin:`${year}-01-01`,
-          dataVigenciaInicialMax:`${year}-12-31`, pagina:page, tamanhoPagina:500
-        }, {signal:request.signal});
-        if (!data.ok) throw new Error(data.erro || 'Consulta indisponível.');
-        if (!Array.isArray(data.resultado) || !Number.isInteger(data.totalPaginas) || data.totalPaginas > 20)
-          throw new Error('Resposta inesperada da consulta.');
-        if (arpRequest !== request || !arpMode) return;
-        data.resultado.filter(row => row && !row.itemExcluido && (!cnpj || String(row.niFornecedor) === cnpj) && (!uasg || String(row.codigoUnidadeGerenciadora) === uasg))
-          .forEach(row => {
-            const key = [row.codigoUnidadeGerenciadora, row.numeroAtaRegistroPreco,
-              row.numeroCompra, row.anoCompra, row.numeroItem, row.niFornecedor].join('|');
-            if (!known.has(key)) { known.add(key); arpItems.push(row); }
-          });
-        if (page >= data.totalPaginas) break;
-      }
-      renderArpResults();
-      $('updated-at').textContent = 'Consulta pública realizada agora';
-    } catch (error) {
-      if (arpRequest !== request || !arpMode) return;
-      $('result-count').textContent = 'Consulta indisponível';
-      $('arp-status').textContent = `Não foi possível concluir a busca: ${error.message}. Tente novamente.`;
-    }
-  }
-
-  async function openBalance(ata, article, button, knownRecords, cnpj) {
+  async function openBalance(ata, article, button) {
     const current = article.querySelector('.ata-adhesion');
     if (current) {
       current.remove();
       button.setAttribute('aria-expanded', 'false');
       if (['loading', 'pending'].includes(article.dataset.adhesionAvailability))
-        setAvailability(article, 'unverified', cnpj);
+        setAvailability(article, 'unverified');
       return;
     }
-    setAvailability(article, 'loading', cnpj);
+    setAvailability(article, 'loading');
     const panel = element('section', 'ata-adhesion');
     panel.setAttribute('aria-label', 'Saldo para adesão por item');
     const intro = element('p', 'adhesion-note',
-      'O saldo é por item e corresponde ao limite informado no Compras.gov.br. A adesão depende da vigência da ata e da análise do pedido para sua unidade.');
+      'O saldo abaixo é global por item. A quantidade disponível para sua unidade pode ser menor e deve ser confirmada no Contratos.gov.br antes de solicitar adesão.');
     const official = element('a', 'document-link', 'Consultar os itens no Contratos.gov.br ↗');
     official.href = 'https://contratos.sistema.gov.br/arp/adesao/create';
     official.target = '_blank';
@@ -452,7 +333,7 @@
     button.setAttribute('aria-expanded', 'true');
     let allItems;
     try {
-      const source = knownRecords || await adesao.withDeadline(signal => adesao.listItems(ata, adesao.proxyFetch, signal), 65000);
+      const source = await adesao.withDeadline(signal => adesao.listItems(ata, adesao.proxyFetch, signal), 65000);
       const byItem = new Map();
       source.filter(row => /^\d+$/.test(String(row.numeroItem || ''))).forEach(row => {
         const key = String(row.numeroItem);
@@ -462,11 +343,11 @@
       allItems = [...byItem.values()].sort((a, b) => Number(a.numeroItem) - Number(b.numeroItem));
     } catch {
       if (panel.isConnected) status.textContent = 'Não foi possível carregar os itens. Feche e abra a ata para tentar novamente ou consulte o Contratos.gov.br.';
-      if (panel.isConnected) setAvailability(article, 'unknown', cnpj);
+      if (panel.isConnected) setAvailability(article, 'unknown');
       return;
     }
     if (!panel.isConnected) return;
-    if (!allItems.length) { status.textContent = 'Nenhum item localizado nesta ata na base pública.'; setAvailability(article, 'unknown', cnpj); return; }
+    if (!allItems.length) { status.textContent = 'Nenhum item localizado nesta ata na base pública.'; setAvailability(article, 'unknown'); return; }
     let shown = 0;
     let checked = 0;
     let failed = 0;
@@ -474,7 +355,7 @@
     const balances = [];
     async function showNext() {
       more.hidden = true;
-      if (article.dataset.adhesionAvailability !== 'available') setAvailability(article, 'loading', cnpj);
+      if (article.dataset.adhesionAvailability !== 'available') setAvailability(article, 'loading');
       const batch = allItems.slice(shown, shown + ITEMS_PER_STEP);
       shown += batch.length;
       const slots = batch.map(row => {
@@ -503,16 +384,15 @@
           ]);
           if (!panel.isConnected) return;
           if (saldo.status === 'fulfilled') {
-            const matching = cnpj ? saldo.value.filter(entry => entry.fornecedor.replace(/\D/g, '').startsWith(cnpj)) : saldo.value;
-            renderBalance(balance, matching);
-            balances.push(...matching);
-            if (!matching.length) missing++;
+            renderBalance(balance, saldo.value);
+            balances.push(...saldo.value);
+            if (!saldo.value.length) missing++;
           } else {
             failed++;
             balance.replaceChildren(element('p', 'adhesion-note', 'Saldo indisponível agora. Confira este item no Contratos.gov.br.'));
           }
           checked++;
-          setAvailability(article, adesao.availability({balances, checked, total:allItems.length, failed, missing}), cnpj);
+          setAvailability(article, adesao.availability({balances, checked, total:allItems.length, failed, missing}));
           if (approvals.status === 'fulfilled')
             balance.append(element('small', 'adhesion-approvals', 'Adesões aprovadas globalmente para o item: ' + approvals.value.total.toLocaleString('pt-BR')));
           else balance.append(element('small', 'adhesion-approvals', 'Detalhamento de adesões aprovadas indisponível nesta consulta.'));
@@ -520,7 +400,7 @@
       }
       if (!panel.isConnected) return;
       status.textContent = `${shown} de ${allItems.length} itens exibidos · saldos consultados agora na fonte pública.`;
-      setAvailability(article, adesao.availability({balances, checked, total:allItems.length, failed, missing}), cnpj);
+      setAvailability(article, adesao.availability({balances, checked, total:allItems.length, failed, missing}));
       more.hidden = shown >= allItems.length;
       more.textContent = `Ver mais itens (${allItems.length - shown} restantes)`;
     }
@@ -590,8 +470,6 @@
     const box = $('active-filters');
     box.replaceChildren();
     const active = fields.filter(key => f[key]).map(key => [key, `${labels[key]}: ${f[key]}`]);
-    if ($('arp-cnpj').value.trim()) active.push(['arp-cnpj', `Fornecedor: ${$('arp-cnpj').value.trim()}`]);
-    if ($('arp-uasg').value.trim()) active.push(['arp-uasg', `UASG: ${$('arp-uasg').value.trim()}`]);
     if (selectedUnit.codigo === ALL_UNITS) {
       nationalFields.filter(key => f[key]).forEach(key => active.push([key,
         `${labels[key]}: ${$(key).selectedOptions[0].textContent}`]));
@@ -604,7 +482,6 @@
       button.addEventListener('click', () => {
         if (key === 'orgao') {selectedOrgan = null; $('orgao-search').value = '';}
         else $(key).value = '';
-        if (arpMode && (key === 'arp-cnpj' || key === 'arp-uasg')) { exitArpMode(); return; }
         visible = 10;
         if ((key === 'objeto' || nationalFields.includes(key) || key === 'orgao') && selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
         else render();
@@ -644,7 +521,6 @@
     const f = filters();
     renderChips(f);
     updateNationalSearch(f);
-    if (arpMode) { renderArpResults(); return; }
     if (!loaded) return;
     const today = todayInBrazil();
     const result = logic.filterAtas(items, f, today);
@@ -825,7 +701,6 @@
           {timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(payload.generatedAt));
         const delayed = Date.now() - new Date(payload.generatedAt).valueOf() > 48 * 60 * 60 * 1000;
         $('updated-at').textContent = `${payload.cached ? 'Dados atualizados' : 'Consulta realizada'} em ${stamp} (horário de Brasília)${delayed ? ' · Confira a ata no PNCP' : ''}`;
-        unitUpdateLabel = $('updated-at').textContent;
       }
       render();
       renderPagination();
@@ -861,33 +736,27 @@
 
   for (const id of fields) $(id).addEventListener(id === 'ano' ? 'change' : 'input', () => {
     visible = 10;
-    if (arpMode && id === 'ano') { exitArpMode(); return; }
-    if (arpMode) { render(); return; }
     if (id === 'objeto' && selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
     else render();
   });
   document.querySelectorAll('input[name="status"]').forEach(radio => radio.addEventListener('change', () => {
     visible = 10;
-    if (arpMode) { render(); return; }
     if (selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
     else render();
   }));
   $('clear-filters').addEventListener('click', () => {
     fields.forEach(id => {$(id).value = '';});
-    $('arp-cnpj').value = '';
-    $('arp-uasg').value = '';
     nationalFields.forEach(id => {$(id).value = '';});
     selectedOrgan = null;
     $('orgao-search').value = '';
     document.querySelector('input[name="status"][value="todos"]').checked = true;
     visible = 10;
-    if (arpMode) { exitArpMode(); return; }
     if (selectedUnit.codigo === ALL_UNITS) scheduleNationalSearch();
     else render();
   });
   $('show-more').addEventListener('click', () => {
-    if (arpMode) {arpVisible += 20; renderArpResults();}
-    else {visible += 10; render();}
+    visible += 10;
+    render();
   });
   $('previous-page').addEventListener('click', () => {if (nationalPage > 1) {nationalPage--; load();}});
   $('next-page').addEventListener('click', () => {
@@ -902,11 +771,6 @@
   $('unit-picker').addEventListener('toggle', () => { if ($('unit-picker').open) $('unit-search').focus(); });
   $('unit-picker').addEventListener('keydown', event => { if (event.key === 'Escape') $('unit-picker').open = false; });
   document.addEventListener('click', event => { if (!$('unit-picker').contains(event.target)) $('unit-picker').open = false; });
-  $('arp-form').addEventListener('submit', event => { event.preventDefault(); loadArp(); });
-  ['arp-cnpj', 'arp-uasg'].forEach(id => $(id).addEventListener('input', () => {
-    if (arpMode) exitArpMode();
-    renderChips(filters());
-  }));
   renderUnitOptions();
   loadUnitCatalog();
   renderChips(filters());

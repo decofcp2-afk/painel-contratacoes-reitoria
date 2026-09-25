@@ -140,8 +140,9 @@ test('consulta no proxy aceita apenas endpoints oficiais de ARP', async () => {
   await assert.rejects(proxyFetch('https://example.com/modulo-arp/3_consultarUnidadesItem', {}, gateway), /Fonte/);
 });
 
-test('página mantém consulta opcional e origem oficial acessível', () => {
+test('página oferece saldo por ata sem o filtro separado por fornecedor', () => {
   const html = readFileSync(join(__dirname, '..', 'atas.html'), 'utf8');
   assert.match(html, /script src="atas-adesao.js(?:\?[^\"]+)?"/);
   assert.match(html, /connect-src[^"]*https:\/\/dadosabertos\.compras\.gov\.br/);
+  assert.doesNotMatch(html, /id="arp-form"|id="arp-cnpj"/);
 });
