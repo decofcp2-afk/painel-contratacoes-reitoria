@@ -1,33 +1,31 @@
-"""Diagnóstico pontual da disponibilidade dos dados públicos de adesão."""
+"""Diagnóstico pontual dos dados públicos de adesão por variação do identificador."""
+import concurrent.futures
 import json
+import time
 import urllib.parse
 import urllib.request
 
-base = "https://dadosabertos.compras.gov.br/modulo-arp/"
-checks = [
-    ("itens", "2_consultarARPItem", dict(
-        codigoUnidadeGerenciadora="153167", numeroCompra="00199",
-        dataVigenciaInicialMin="2025-11-13", dataVigenciaInicialMax="2025-11-13",
-        pagina="1", tamanhoPagina="10")),
-    ("saldos", "3_consultarUnidadesItem", dict(
-        numeroAta="19901/2025", unidadeGerenciadora="153167",
-        numeroItem="1", pagina="1", tamanhoPagina="10"))
+BASE = "https://dadosabertos.compras.gov.br/modulo-arp/3_consultarUnidadesItem?"
+CASES = [
+    ("ano-e-1", {"numeroAta":"19901/2025","unidadeGerenciadora":"153167","numeroItem":"1"}),
+    ("ano-e-00004", {"numeroAta":"19901/2025","unidadeGerenciadora":"153167","numeroItem":"00004"}),
+    ("numero-e-4", {"numeroAta":"19901","unidadeGerenciadora":"153167","numeroItem":"4"}),
+    ("numero-e-00004", {"numeroAta":"19901","unidadeGerenciadora":"153167","numeroItem":"00004"}),
 ]
-for name, endpoint, args in checks:
-    url = base + endpoint + "?" + urllib.parse.urlencode(args)
+
+def probe(name, args):
+    url = BASE + urllib.parse.urlencode(args)
+    start = time.monotonic()
     try:
-        req = urllib.request.Request(url, headers={"Accept":"application/json",
-            "User-Agent":"PainelContratacoesCPII/1.0 (consulta publica)"})
-        with urllib.request.urlopen(req, timeout=25) as response:
-            payload = json.load(response)
-            records = payload.get("resultado", [])
-            print(name, "HTTP", response.status, "total", payload.get("totalRegistros"),
-                "pages", payload.get("totalPaginas"), "rows", len(records))
-            if records:
-                first = records[0]
-                print(name, "fields", sorted(first.keys()))
-                print(name, "sample", {key:first.get(key) for key in (
-                    "numeroAta", "numeroAtaRegistroPreco", "unidadeGerenciadora",
-                    "numeroItem", "saldoAdesao", "qtdLimiteAdesao")})
+        request = urllib.request.Request(url, headers={"Accept":"application/json", "User-Agent":"PainelContratacoesCPII/1.0"})
+        with urllib.request.urlopen(request, timeout=20) as response:
+            data = json.load(response)
+            rows = data.get("resultado", [])
+            sample = [{key:row.get(key) for key in ("numeroAta","unidadeGerenciadora","numeroItem","saldoAdesao","qtdLimiteAdesao")} for row in rows[:2]]
+            return name, round(time.monotonic()-start,1), response.status, data.get("totalRegistros"), sample
     except Exception as exc:
-        print(name, type(exc).__name__, str(exc)[:250])
+        return name, round(time.monotonic()-start,1), type(exc).__name__, str(exc)[:150]
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+    for result in pool.map(lambda item: probe(*item), CASES):
+        print(result, flush=True)
