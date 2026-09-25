@@ -2,6 +2,9 @@ window.PAINEL_CONFIG = {
   // URL /exec do Apps Script — mantida por compatibilidade durante a transicao.
   apiUrl: "https://script.google.com/macros/s/AKfycby1QQr6sq9Tk1W2Xb6aMkaMzW8w4B3d6Aegr9vZ3TtSoNmc-5JjbFkPdoIsc1Ra4zBZ/exec",
 
+  // Ponte publica, somente leitura, para os dados abertos de itens e saldos de ARP.
+  arpApiUrl: "https://script.google.com/macros/s/AKfycbxzeV93Auc2PfEW5FNk6I71kuSpklKLR0jEJY496rDq53YItCYZQdeQX4BpVje25AaAYg/exec",
+
   // Liga/desliga a leitura via Firestore no corte da Fase 3.
   // Mantenha false ate o App Gestao estar gravando no Firestore (senao painel desatualiza).
   firestoreAtivo: true,

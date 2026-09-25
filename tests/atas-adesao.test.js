@@ -2,7 +2,7 @@ const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {readFileSync} = require('node:fs');
 const {join} = require('node:path');
-const {context, normalizeItem, percentage, withDeadline, listItems, getBalance} = require('../atas-adesao');
+const {context, normalizeItem, percentage, withDeadline, listItems, getBalance, proxyFetch} = require('../atas-adesao');
 
 const ata = {
   numeroAtaRegistroPreco:'00107/2026', codigoUnidadeGerenciadora:'153167',
@@ -76,6 +76,35 @@ test('saldo é retornado sem agregar fornecedores e só da ata e item pedidos', 
   assert.equal(rows.length, 2);
   assert.deepEqual(rows.map(row => row.percentual), [50,0]);
   assert.deepEqual(rows.map(row => row.fornecedor), ['Editora A','Editora B']);
+});
+
+test('API atual usa saldoAdesoes e repete o saldo nas unidades sem somá-lo', async () => {
+  const fetcher = async () => ({ok:true, json:async () => ({resultado:[
+    {numeroAta:'00107/2026', unidadeGerenciadora:'153167', numeroItem:'00001',
+      fornecedor:'12345678000190 - Fornecedor A', saldoAdesoes:40, qtdLimiteAdesao:100,
+      codigoUnidade:'153167', tipoUnidade:'GERENCIADORA', aceitaAdesao:true},
+    {numeroAta:'00107/2026', unidadeGerenciadora:'153167', numeroItem:'00001',
+      fornecedor:'12345678000190 - Fornecedor A', saldoAdesoes:40, qtdLimiteAdesao:100,
+      codigoUnidade:'155636', tipoUnidade:'PARTICIPANTE', aceitaAdesao:true}
+  ], totalPaginas:1})});
+  const rows = await getBalance(ata, '00001', fetcher);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].saldo, 40);
+  assert.equal(rows[0].percentual, 40);
+  assert.equal(rows[0].unidades, 2);
+  assert.equal(rows[0].tipoUnidade, 'GERENCIADORA');
+});
+
+test('consulta no proxy aceita apenas os dois endpoints oficiais de ARP', async () => {
+  const calls = [];
+  const gateway = {chamarApi:async (...args) => {
+    calls.push(args);
+    return {ok:true, resultado:[], totalPaginas:0};
+  }};
+  const response = await proxyFetch('https://dadosabertos.compras.gov.br/modulo-arp/3_consultarUnidadesItem?numeroAta=00107%2F2026&unidadeGerenciadora=153167&numeroItem=00001', {}, gateway);
+  assert.equal((await response.json()).totalPaginas, 0);
+  assert.equal(calls[0][1].endpoint, 'saldo');
+  await assert.rejects(proxyFetch('https://example.com/modulo-arp/3_consultarUnidadesItem', {}, gateway), /Fonte/);
 });
 
 test('página mantém consulta opcional e origem oficial acessível', () => {

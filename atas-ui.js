@@ -41,6 +41,11 @@
   let organTimer;
   let organCatalog;
   let organCatalogRequest;
+  let supplierItems = [];
+  let supplierPage = 0;
+  let supplierPages = 0;
+  let supplierQuery;
+  let supplierRequest;
 
   function todayInBrazil() {
     const parts = new Intl.DateTimeFormat('en-US', {timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
@@ -251,7 +256,8 @@
       const entry = element('div', 'adhesion-balance');
       const heading = element('strong', '', row.descricao || 'Item consultado');
       const meta = element('span', '', [row.fornecedor && 'Fornecedor: ' + row.fornecedor,
-        row.unidade && 'Unidade: ' + row.unidade].filter(Boolean).join(' · '));
+        row.unidade && 'Unidade: ' + row.unidade,
+        row.unidades > 1 && `saldo não somado entre ${row.unidades} unidades`].filter(Boolean).join(' · '));
       const invalid = row.saldo !== null && row.limite !== null && row.saldo > row.limite;
       const value = invalid
         ? 'Saldo: ' + qty(row.saldo) + ' · limite: ' + qty(row.limite) + ' · dados divergentes; confira na origem'
@@ -260,6 +266,8 @@
         : qty(row.saldo) + ' de ' + qty(row.limite) + ' unidades · ' +
           row.percentual.toLocaleString('pt-BR', {maximumFractionDigits:1}) + '% do limite de adesão disponível';
       entry.append(heading, meta, element('b', 'adhesion-value', value));
+      if (!row.aceitaAdesao) entry.append(element('small', '', 'A origem informa que este item não aceita adesão.'));
+      if (row.divergente) entry.append(element('small', '', 'Há saldos diferentes entre unidades; confira na origem.'));
       if (row.atualizadoEm) {
         const date = new Date(row.atualizadoEm);
         if (!Number.isNaN(date.getTime())) entry.append(element('small', '', 'Dados atualizados na origem em ' +
@@ -267,6 +275,99 @@
       }
       target.append(entry);
     });
+  }
+
+  function renderSupplierResults() {
+    const target = $('supplier-results');
+    const groups = new Map();
+    supplierItems.forEach(row => {
+      const key = [row.codigoUnidadeGerenciadora, row.numeroAtaRegistroPreco,
+        row.numeroCompra, row.anoCompra].join('|');
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(row);
+    });
+    target.replaceChildren();
+    const quantity = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
+      ? Number(value).toLocaleString('pt-BR') : 'não informado';
+    groups.forEach(records => {
+      const ata = records[0];
+      const box = element('article', 'supplier-ata');
+      box.append(element('h3', '', `Ata ${ata.numeroAtaRegistroPreco} · UASG ${ata.codigoUnidadeGerenciadora}`),
+        element('small', '', `Compra ${ata.numeroCompra || 'não informada'}/${ata.anoCompra || '—'} · Vigência ${formatDate(ata.dataVigenciaInicial)} a ${formatDate(ata.dataVigenciaFinal)} · ${ata.nomeRazaoSocialFornecedor || supplierQuery.cnpj}`));
+      records.sort((a, b) => Number(a.numeroItem) - Number(b.numeroItem)).forEach(row => {
+        const item = element('div', 'supplier-item');
+        const detail = element('div');
+        detail.append(element('strong', '', `Item ${row.numeroItem} · ${row.descricaoItem || 'Descrição não informada'}`),
+          element('small', '', `Quantidade homologada: ${quantity(row.quantidadeHomologadaVencedor)} · Limite máximo para adesão: ${quantity(row.maximoAdesao)}`));
+        const button = element('button', 'adhesion-button', 'Consultar saldo');
+        button.type = 'button';
+        const result = element('div', 'adhesion-results');
+        button.addEventListener('click', async () => {
+          button.disabled = true;
+          result.replaceChildren(element('p', 'adhesion-note', 'Consultando saldo na fonte oficial…'));
+          try {
+            const rows = await adesao.withDeadline(signal => adesao.getBalance(ata, row.numeroItem, adesao.proxyFetch, signal), 65000);
+            renderBalance(result, rows);
+          } catch {
+            result.replaceChildren(element('p', 'adhesion-note', 'Saldo indisponível nesta consulta. Confira o item no Contratos.gov.br.'));
+          } finally { button.disabled = false; }
+        });
+        item.append(detail, button, result);
+        box.append(item);
+      });
+      target.append(box);
+    });
+    $('supplier-status').textContent = groups.size
+      ? `${groups.size} ${groups.size === 1 ? 'ata' : 'atas'} e ${supplierItems.length} ${supplierItems.length === 1 ? 'item' : 'itens'} localizados · página ${supplierPage} de ${supplierPages}. O saldo é consultado ao abrir cada item.`
+      : 'Nenhuma ata localizada para este CNPJ e ano.';
+    $('supplier-more').hidden = supplierPage >= supplierPages;
+  }
+
+  async function loadSupplier(reset) {
+    const cnpj = reset ? $('supplier-cnpj').value.replace(/\D/g, '') : supplierQuery.cnpj;
+    const year = reset ? $('supplier-year').value : supplierQuery.year;
+    if (!/^\d{14}$/.test(cnpj)) {
+      $('supplier-status').textContent = 'Informe um CNPJ com 14 dígitos.';
+      return;
+    }
+    if (supplierRequest) supplierRequest.abort();
+    if (reset) {
+      supplierItems = [];
+      supplierPage = 0;
+      supplierPages = 0;
+      $('supplier-results').replaceChildren();
+    }
+    supplierQuery = {cnpj, year};
+    const request = new AbortController();
+    supplierRequest = request;
+    $('supplier-status').textContent = 'Buscando itens registrados para este fornecedor…';
+    $('supplier-more').hidden = true;
+    try {
+      const page = supplierPage + 1;
+      const data = await window.PainelGateway.chamarApi('arp.proxy', {
+        endpoint:'itens', niFornecedor:cnpj, dataVigenciaInicialMin:`${year}-01-01`,
+        dataVigenciaInicialMax:`${year}-12-31`, pagina:page, tamanhoPagina:100
+      }, {signal:request.signal});
+      if (!data.ok) throw new Error(data.erro || 'Consulta indisponível.');
+      if (!Array.isArray(data.resultado) || !Number.isInteger(data.totalPaginas) || data.totalPaginas > 20)
+        throw new Error('Resposta inesperada da consulta.');
+      if (supplierRequest !== request) return;
+      const known = new Set(supplierItems.map(row => [row.codigoUnidadeGerenciadora,
+        row.numeroAtaRegistroPreco, row.numeroItem, row.niFornecedor].join('|')));
+      data.resultado.filter(row => row && !row.itemExcluido && String(row.niFornecedor) === cnpj)
+        .forEach(row => {
+          const key = [row.codigoUnidadeGerenciadora, row.numeroAtaRegistroPreco,
+            row.numeroItem, row.niFornecedor].join('|');
+          if (!known.has(key)) { known.add(key); supplierItems.push(row); }
+        });
+      supplierPage = page;
+      supplierPages = data.totalPaginas;
+      renderSupplierResults();
+    } catch (error) {
+      if (supplierRequest !== request) return;
+      $('supplier-status').textContent = `Não foi possível concluir a busca: ${error.message}. Tente novamente.`;
+      $('supplier-more').hidden = supplierPage >= supplierPages;
+    }
   }
 
   async function openBalance(ata, article, button) {
@@ -320,7 +421,7 @@
       status.textContent = 'Consultando o saldo do item ' + item + '…';
       result.replaceChildren();
       try {
-        const rows = await adesao.withDeadline(signal => adesao.getBalance(ata, item, fetch, signal));
+        const rows = await adesao.withDeadline(signal => adesao.getBalance(ata, item, adesao.proxyFetch, signal), 65000);
         status.textContent = rows.some(row => row.saldo !== null)
           ? 'Dados públicos para o item ' + item + ' · consulta realizada agora'
           : 'A base pública não informa o saldo deste item. Consulte a simulação de adesão no Contratos.gov.br.';
@@ -337,7 +438,7 @@
       select.replaceChildren(element('option', '', 'Carregando itens…'));
       status.textContent = 'Buscando itens da ata…';
       try {
-        const itens = await adesao.withDeadline(signal => adesao.listItems(ata, fetch, signal), 45000);
+        const itens = await adesao.withDeadline(signal => adesao.listItems(ata, adesao.proxyFetch, signal), 65000);
         select.replaceChildren(element('option', '', itens.length ? 'Selecione um item' : 'Nenhum item localizado'));
         itens.forEach(item => {
           const option = element('option', '', 'Item ' + item.numeroItem + (item.descricao ? ' · ' + item.descricao.slice(0, 90) : ''));
@@ -717,6 +818,13 @@
   $('unit-picker').addEventListener('toggle', () => { if ($('unit-picker').open) $('unit-search').focus(); });
   $('unit-picker').addEventListener('keydown', event => { if (event.key === 'Escape') $('unit-picker').open = false; });
   document.addEventListener('click', event => { if (!$('unit-picker').contains(event.target)) $('unit-picker').open = false; });
+  for (let year = new Date().getFullYear(); year >= 2021; year--) {
+    const option = element('option', '', year);
+    option.value = String(year);
+    $('supplier-year').append(option);
+  }
+  $('supplier-form').addEventListener('submit', event => { event.preventDefault(); loadSupplier(true); });
+  $('supplier-more').addEventListener('click', () => loadSupplier(false));
   renderUnitOptions();
   loadUnitCatalog();
   renderChips(filters());

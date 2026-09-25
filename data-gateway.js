@@ -18,9 +18,9 @@
   'use strict';
 
   // ── Transporte (privado) ────────────────────────────────────────────────
-  function getApiConfig_() {
+  function getApiConfig_(route) {
     var cfg = root.PAINEL_CONFIG || {};
-    var apiUrl = String(cfg.apiUrl || '').trim();
+    var apiUrl = String((route === 'arp.proxy' ? cfg.arpApiUrl : cfg.apiUrl) || '').trim();
     if (!apiUrl) {
       throw new Error('Configure a URL do Apps Script no arquivo config.js.');
     }
@@ -48,11 +48,13 @@
     return apiUrl + sep + query.join('&');
   }
 
-  function chamarApiPainelJsonp_(route, params) {
+  function chamarApiPainelJsonp_(route, params, options) {
     return new Promise(function(resolve, reject) {
+      options = options || {};
+      if (options.signal && options.signal.aborted) { reject(new Error('Consulta cancelada.')); return; }
       var cfg;
       try {
-        cfg = getApiConfig_();
+        cfg = getApiConfig_(route);
       } catch(e) {
         reject(e);
         return;
@@ -64,8 +66,14 @@
 
       function cleanup() {
         clearTimeout(timer);
+        if (options.signal) options.signal.removeEventListener('abort', cancel);
         try { delete root[callbackName]; } catch(e) { root[callbackName] = undefined; }
         if (script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      function cancel() {
+        cleanup();
+        reject(new Error('Consulta cancelada.'));
       }
 
       root[callbackName] = function(payload) {
@@ -81,30 +89,32 @@
       timer = setTimeout(function() {
         cleanup();
         reject(new Error('Tempo esgotado ao consultar o Apps Script.'));
-      }, 30000);
+      }, options.timeoutMs || (route === 'arp.proxy' ? 60000 : 30000));
 
       script.src = montarUrlApiPainel_(cfg.apiUrl, route, params, callbackName);
+      if (options.signal) options.signal.addEventListener('abort', cancel, {once:true});
       document.head.appendChild(script);
     });
   }
 
-  function chamarApiPainel_(route, params) {
+  function chamarApiPainel_(route, params, options) {
     var cfg;
     try {
-      cfg = getApiConfig_();
+      cfg = getApiConfig_(route);
     } catch(e) {
       return Promise.reject(e);
     }
 
     if (!root.fetch) {
-      return chamarApiPainelJsonp_(route, params);
+      return chamarApiPainelJsonp_(route, params, options);
     }
 
     return root.fetch(montarUrlApiPainel_(cfg.apiUrl, route, params), {
       method: 'GET',
       cache: 'no-store',
       credentials: 'omit',
-      redirect: 'follow'
+      redirect: 'follow',
+      signal: options && options.signal
     })
       .then(function(resp) {
         if (!resp.ok) {
@@ -123,7 +133,7 @@
         if (root.console && console.warn) {
           console.warn('Fetch do Apps Script falhou; usando JSONP.', err);
         }
-        return chamarApiPainelJsonp_(route, params);
+        return chamarApiPainelJsonp_(route, params, options);
       });
   }
 

@@ -3,13 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com https://dadosabertos.compras.gov.br https://pncp.gov.br; base-uri 'self'; object-src 'none'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://script.google.com https://script.googleusercontent.com; style-src 'self'; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com https://dadosabertos.compras.gov.br https://pncp.gov.br; base-uri 'self'; object-src 'none'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="theme-color" content="#0b1f3d">
   <meta name="description" content="Consulte atas de registro de preços por UASG, objeto e vigência, com acesso aos documentos no PNCP.">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="atas.css">
   <title>Consulta de atas | Colégio Pedro II</title>
+  <script src="config.js?v=arp-20260925" defer></script>
+  <script src="data-gateway.js?v=arp-20260925" defer></script>
   <script src="atas-logic.js" defer></script>
   <script src="atas-adesao.js" defer></script>
   <script src="atas-ui.js" defer></script>
@@ -68,6 +70,18 @@
         <div class="field organ-field"><label for="orgao-search">Órgão</label><input id="orgao-search" type="search" list="orgao-options" placeholder="Digite o nome para ver sugestões" autocomplete="off" aria-describedby="orgao-help"><datalist id="orgao-options"></datalist><small id="orgao-help">Digite pelo menos três caracteres e selecione uma sugestão.</small></div>
       </div>
       <div class="filters-footer"><div id="active-filters" class="active-filters" aria-label="Filtros ativos"></div><button id="clear-filters" class="clear-button" type="button">Limpar filtros</button></div>
+    </section>
+    <section class="supplier-panel" aria-labelledby="supplier-title">
+      <h2 id="supplier-title">Buscar atas pelo fornecedor</h2>
+      <p>Informe o CNPJ para localizar atas e itens registrados no Compras.gov.br. O saldo é consultado separadamente para cada item.</p>
+      <form id="supplier-form" class="supplier-form">
+        <div class="field"><label for="supplier-cnpj">CNPJ do fornecedor</label><input id="supplier-cnpj" inputmode="numeric" autocomplete="off" placeholder="00.000.000/0000-00" required></div>
+        <div class="field"><label for="supplier-year">Ano de início da ata</label><select id="supplier-year"></select></div>
+        <button class="adhesion-button" type="submit">Buscar atas</button>
+      </form>
+      <p id="supplier-status" class="adhesion-note" role="status" aria-live="polite"></p>
+      <div id="supplier-results" class="supplier-results"></div>
+      <button id="supplier-more" class="show-more" type="button" hidden>Carregar mais itens</button>
     </section>
     <section class="results" aria-labelledby="results-title">
       <div class="results-heading"><h2 id="results-title"><span id="result-count" role="status" aria-live="polite">Carregando atas…</span></h2><p id="updated-at" class="updated-at"></p></div>

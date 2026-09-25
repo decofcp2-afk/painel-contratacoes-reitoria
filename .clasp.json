@@ -1,0 +1,16 @@
+{
+  "scriptId": "1o_jYqGJl0PRXVkO_AbUe0Ss6iaegIYUoiVv9d1B13pG6uuPeqvx1LaWJ",
+  "rootDir": "arp-api",
+  "scriptExtensions": [
+    ".js",
+    ".gs"
+  ],
+  "htmlExtensions": [
+    ".html"
+  ],
+  "jsonExtensions": [
+    ".json"
+  ],
+  "filePushOrder": [],
+  "skipSubdirectories": false
+}
