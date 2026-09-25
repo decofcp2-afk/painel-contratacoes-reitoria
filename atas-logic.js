@@ -67,6 +67,7 @@
       anoCompra:record.ano,
       numeroControlePncpAta:record.numero_controle_pncp,
       linkAtaPNCP,
+      origemConsulta:'pncp',
       ataExcluido:record.cancelado === true
     };
   }
