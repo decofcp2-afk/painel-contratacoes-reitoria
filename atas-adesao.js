@@ -22,6 +22,14 @@
     return m[1].replace(/^0+(?=\d)/, '') + '/' + m[2];
   }
 
+  function normalizeItem(value, knownItems = []) {
+    const input = String(value || '').trim();
+    if (!/^\d+$/.test(input)) return input;
+    const exact = knownItems.find(item => /^\d+$/.test(String(item)) &&
+      Number(item) === Number(input));
+    return exact === undefined ? input.padStart(5, '0') : String(exact);
+  }
+
   function context(ata) {
     const uasg = String(ata.codigoUnidadeGerenciadora || '').trim();
     const numeroAta = String(ata.numeroAtaRegistroPreco || '').trim();
@@ -132,5 +140,5 @@
     }));
   }
 
-  return {context, identity, percentage, withDeadline, listItems, getBalance};
+  return {context, identity, normalizeItem, percentage, withDeadline, listItems, getBalance};
 });
