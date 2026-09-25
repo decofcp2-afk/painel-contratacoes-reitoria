@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#0b1f3d">
   <meta name="description" content="Consulte atas de registro de preços por UASG, objeto e vigência, com acesso aos documentos no PNCP.">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="atas.css?v=arp-20260925c">
+  <link rel="stylesheet" href="atas.css?v=arp-20260925d">
   <title>Consulta de atas | Colégio Pedro II</title>
   <script src="config.js?v=arp-20260925" defer></script>
   <script src="data-gateway.js?v=arp-20260925b" defer></script>
@@ -58,24 +58,27 @@
           </div>
         </fieldset>
       </div>
-      <div class="secondary-filters">
-        <div class="field"><label for="numero">Número da ata</label><input id="numero" type="search" placeholder="Ex.: 12/2025" autocomplete="off"></div>
-        <div class="field"><label for="ano">Ano da ata</label><select id="ano"><option value="">Todos os anos</option></select></div>
-        <div class="field"><label for="compra">Número da compra</label><input id="compra" type="search" placeholder="Ex.: 90012/2025" autocomplete="off"></div>
-      </div>
-      <form id="arp-form" class="arp-search" aria-label="Buscar atas por fornecedor ou unidade gerenciadora">
-        <div class="field"><label for="arp-cnpj">CNPJ do fornecedor</label><input id="arp-cnpj" inputmode="numeric" autocomplete="off" placeholder="00.000.000/0000-00"></div>
-        <div class="field"><label for="arp-uasg">Unidade gerenciadora (UASG)</label><input id="arp-uasg" inputmode="numeric" autocomplete="off" placeholder="Ex.: 153167"></div>
-        <button class="adhesion-button" type="submit">Buscar atas</button>
-        <small>Informe o CNPJ, a UASG ou ambos. Selecione o ano da ata acima para consultar os itens e saldos do Compras.gov.br.</small>
-        <p id="arp-status" class="adhesion-note" role="status" aria-live="polite"></p>
-      </form>
-      <div id="national-filters" class="national-filters" hidden>
-        <div class="field"><label for="uf">Estado</label><select id="uf"><option value="">Todos os estados</option><option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option><option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option><option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option><option>SE</option><option>TO</option></select></div>
-        <div class="field"><label for="esfera">Esfera</label><select id="esfera"><option value="">Todas as esferas</option><option value="F">Federal</option><option value="E">Estadual</option><option value="M">Municipal</option><option value="D">Distrital</option><option value="N">Não se aplica</option></select></div>
-        <div class="field"><label for="poder">Poder</label><select id="poder"><option value="">Todos os poderes</option><option value="E">Executivo</option><option value="L">Legislativo</option><option value="J">Judiciário</option><option value="N">Não se aplica</option></select></div>
-        <div class="field organ-field"><label for="orgao-search">Órgão</label><input id="orgao-search" type="search" list="orgao-options" placeholder="Digite o nome para ver sugestões" autocomplete="off" aria-describedby="orgao-help"><datalist id="orgao-options"></datalist><small id="orgao-help">Digite pelo menos três caracteres e selecione uma sugestão.</small></div>
-      </div>
+      <details id="more-filters" class="more-filters">
+        <summary><span class="more-filters-show">Mais filtros</span><span class="more-filters-hide">Ocultar filtros</span><span class="more-filters-arrow" aria-hidden="true">⌄</span></summary>
+        <div class="secondary-filters">
+          <div class="field"><label for="numero">Número da ata</label><input id="numero" type="search" placeholder="Ex.: 12/2025" autocomplete="off"></div>
+          <div class="field"><label for="ano">Ano da ata</label><select id="ano"><option value="">Todos os anos</option></select></div>
+          <div class="field"><label for="compra">Número da compra</label><input id="compra" type="search" placeholder="Ex.: 90012/2025" autocomplete="off"></div>
+        </div>
+        <form id="arp-form" class="arp-search" aria-label="Buscar atas por fornecedor ou unidade gerenciadora">
+          <div class="field"><label for="arp-cnpj">CNPJ do fornecedor</label><input id="arp-cnpj" inputmode="numeric" autocomplete="off" placeholder="00.000.000/0000-00"></div>
+          <div class="field"><label for="arp-uasg">Unidade gerenciadora (UASG)</label><input id="arp-uasg" inputmode="numeric" autocomplete="off" placeholder="Ex.: 153167"></div>
+          <button class="adhesion-button" type="submit">Buscar atas</button>
+          <small>Informe o CNPJ, a UASG ou ambos. Selecione o ano da ata acima para consultar os itens e saldos do Compras.gov.br.</small>
+          <p id="arp-status" class="adhesion-note" role="status" aria-live="polite"></p>
+        </form>
+        <div id="national-filters" class="national-filters" hidden>
+          <div class="field"><label for="uf">Estado</label><select id="uf"><option value="">Todos os estados</option><option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option><option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option><option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option><option>SE</option><option>TO</option></select></div>
+          <div class="field"><label for="esfera">Esfera</label><select id="esfera"><option value="">Todas as esferas</option><option value="F">Federal</option><option value="E">Estadual</option><option value="M">Municipal</option><option value="D">Distrital</option><option value="N">Não se aplica</option></select></div>
+          <div class="field"><label for="poder">Poder</label><select id="poder"><option value="">Todos os poderes</option><option value="E">Executivo</option><option value="L">Legislativo</option><option value="J">Judiciário</option><option value="N">Não se aplica</option></select></div>
+          <div class="field organ-field"><label for="orgao-search">Órgão</label><input id="orgao-search" type="search" list="orgao-options" placeholder="Digite o nome para ver sugestões" autocomplete="off" aria-describedby="orgao-help"><datalist id="orgao-options"></datalist><small id="orgao-help">Digite pelo menos três caracteres e selecione uma sugestão.</small></div>
+        </div>
+      </details>
       <div class="filters-footer"><div id="active-filters" class="active-filters" aria-label="Filtros ativos"></div><button id="clear-filters" class="clear-button" type="button">Limpar filtros</button></div>
     </section>
     <section class="results" aria-labelledby="results-title">
