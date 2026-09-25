@@ -2,7 +2,7 @@ const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {readFileSync} = require('node:fs');
 const {join} = require('node:path');
-const {context, percentage, listItems, getBalance} = require('../atas-adesao');
+const {context, percentage, withDeadline, listItems, getBalance} = require('../atas-adesao');
 
 const ata = {
   numeroAtaRegistroPreco:'00107/2026', codigoUnidadeGerenciadora:'153167',
@@ -16,6 +16,17 @@ test('saldo de adesão é calculado por item, inclusive saldo zero', () => {
   assert.equal(percentage({saldoAdesao:null, qtdLimiteAdesao:100}), null);
   assert.equal(percentage({saldoAdesao:2, qtdLimiteAdesao:0}), null);
   assert.equal(context({...ata, codigoUnidadeGerenciadora:'12345678901234'}), null);
+});
+
+test('consulta que não responde termina com prazo e cancela a requisição', async () => {
+  let cancelled = false;
+  await assert.rejects(
+    withDeadline(signal => new Promise((resolve, reject) => {
+      signal.addEventListener('abort', () => { cancelled = true; reject(new Error('cancelled')); });
+    }), 15),
+    /cancelled|Tempo limite/
+  );
+  assert.equal(cancelled, true);
 });
 
 test('descoberta dos itens filtra outra ata, UASG e registros excluídos', async () => {
