@@ -2,7 +2,7 @@ const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {readFileSync} = require('node:fs');
 const {join} = require('node:path');
-const {context, percentage, withDeadline, listItems, getBalance} = require('../atas-adesao');
+const {context, normalizeItem, percentage, withDeadline, listItems, getBalance} = require('../atas-adesao');
 
 const ata = {
   numeroAtaRegistroPreco:'00107/2026', codigoUnidadeGerenciadora:'153167',
@@ -16,6 +16,13 @@ test('saldo de adesão é calculado por item, inclusive saldo zero', () => {
   assert.equal(percentage({saldoAdesao:null, qtdLimiteAdesao:100}), null);
   assert.equal(percentage({saldoAdesao:2, qtdLimiteAdesao:0}), null);
   assert.equal(context({...ata, codigoUnidadeGerenciadora:'12345678901234'}), null);
+});
+
+test('número digitado conserva os zeros do identificador oficial do item', () => {
+  assert.equal(normalizeItem('4', ['00004']), '00004');
+  assert.equal(normalizeItem('4'), '00004');
+  assert.equal(normalizeItem('004', ['004']), '004');
+  assert.equal(normalizeItem('x'), 'x');
 });
 
 test('consulta que não responde termina com prazo e cancela a requisição', async () => {

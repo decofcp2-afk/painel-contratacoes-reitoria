@@ -304,7 +304,9 @@
     button.setAttribute('aria-expanded', 'true');
 
     consult.addEventListener('click', async () => {
-      const item = manual.value.trim() || select.value;
+      const typed = manual.value.trim();
+      // A API de saldos distingue "4" de "00004". Preserve o código retornado pela lista.
+      const item = typed ? adesao.normalizeItem(typed, [...select.options].map(option => option.value)) : select.value;
       if (!/^\d+$/.test(item)) {
         status.textContent = 'Selecione ou informe o número do item.';
         return;
@@ -314,7 +316,9 @@
       result.replaceChildren();
       try {
         const rows = await adesao.withDeadline(signal => adesao.getBalance(ata, item, fetch, signal));
-        status.textContent = 'Saldo publicado para o item ' + item + ' · consulta realizada agora';
+        status.textContent = rows.some(row => row.saldo !== null)
+          ? 'Dados públicos para o item ' + item + ' · consulta realizada agora'
+          : 'A base pública não informa o saldo deste item. Consulte a simulação de adesão no Contratos.gov.br.';
         renderBalance(result, rows);
       } catch {
         status.textContent = 'Não foi possível obter o saldo na API pública. O percentual não está disponível agora; tente novamente mais tarde ou confira no Compras.gov.br.';
@@ -328,7 +332,7 @@
       select.replaceChildren(element('option', '', 'Carregando itens…'));
       status.textContent = 'Buscando itens da ata…';
       try {
-        const itens = await adesao.withDeadline(signal => adesao.listItems(ata, fetch, signal));
+        const itens = await adesao.withDeadline(signal => adesao.listItems(ata, fetch, signal), 45000);
         select.replaceChildren(element('option', '', itens.length ? 'Selecione um item' : 'Nenhum item localizado'));
         itens.forEach(item => {
           const option = element('option', '', 'Item ' + item.numeroItem + (item.descricao ? ' · ' + item.descricao.slice(0, 90) : ''));
