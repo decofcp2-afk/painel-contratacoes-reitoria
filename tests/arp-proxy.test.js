@@ -48,3 +48,12 @@ test('proxy consulta saldo apenas para ata, UASG e item válidos', () => {
   assert.equal(calls[0].pathname, '/modulo-arp/3_consultarUnidadesItem');
   assert.equal(calls[0].searchParams.get('numeroAta'), '00024/2025');
 });
+
+test('proxy consulta adesões aprovadas para a ata e o item informados', () => {
+  const {context,calls} = proxy();
+  const response = context.doGet({parameter:{route:'arp.proxy',endpoint:'adesoes',numeroAta:'00024/2025',
+    unidadeGerenciadora:'153167',numeroItem:'00051'}});
+  assert.match(response.body, /"ok":true/);
+  assert.equal(calls[0].pathname, '/modulo-arp/5_consultarAdesoesItem');
+  assert.equal(calls[0].searchParams.get('numeroItem'), '00051');
+});

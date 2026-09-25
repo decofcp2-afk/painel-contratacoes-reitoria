@@ -14,7 +14,8 @@
     if (request.origin !== 'https://dadosabertos.compras.gov.br')
       throw new Error('Fonte de ARP não permitida.');
     const endpoint = request.pathname === '/modulo-arp/2_consultarARPItem' ? 'itens' :
-      request.pathname === '/modulo-arp/3_consultarUnidadesItem' ? 'saldo' : '';
+      request.pathname === '/modulo-arp/3_consultarUnidadesItem' ? 'saldo' :
+      request.pathname === '/modulo-arp/5_consultarAdesoesItem' ? 'adesoes' : '';
     if (!endpoint || !gateway?.chamarApi) throw new Error('Consulta de ARP não configurada.');
     const payload = await gateway.chamarApi('arp.proxy',
       {endpoint, ...Object.fromEntries(request.searchParams)}, {signal:options.signal});
@@ -115,7 +116,11 @@
       if (!/^\d+$/.test(item)) return;
       if (!items.has(item)) items.set(item, {
         numeroItem:item,
-        descricao:String(record.descricaoItem || '').trim()
+        descricao:String(record.descricaoItem || '').trim(),
+        codigoItem:String(record.codigoItem || '').trim(),
+        valorUnitario:number(record.valorUnitario),
+        quantidadeHomologadaVencedor:number(record.quantidadeHomologadaVencedor),
+        maximoAdesao:number(record.maximoAdesao)
       });
     });
     collect(await pages('2_consultarARPItem', params, fetcher, signal));
@@ -180,5 +185,26 @@
     return [...suppliers.values()];
   }
 
-  return {context, identity, normalizeItem, percentage, withDeadline, listItems, getBalance, proxyFetch};
+  async function getApprovals(ata, item, fetcher, signal) {
+    const ctx = context(ata);
+    if (!ctx || !/^\d+$/.test(String(item || '')))
+      throw new Error('Ata ou item inválido para consultar adesões.');
+    const rows = await pages('5_consultarAdesoesItem', {
+      numeroAta:ctx.numeroAta, unidadeGerenciadora:ctx.uasg, numeroItem:String(item)
+    }, fetcher, signal);
+    let total = 0;
+    const byUnit = new Map();
+    rows.forEach(row => {
+      if (!row || identity(row.numeroAta) !== identity(ctx.numeroAta) ||
+          String(row.unidadeGerenciadora || '') !== ctx.uasg) return;
+      const approved = number(row.quantidadeAprovadaAdesao);
+      if (approved === null) return;
+      total += approved;
+      const unit = String(row.unidadeNaoParticipante || '').trim();
+      if (unit) byUnit.set(unit, (byUnit.get(unit) || 0) + approved);
+    });
+    return {total, byUnit};
+  }
+
+  return {context, identity, normalizeItem, percentage, withDeadline, listItems, getBalance, getApprovals, proxyFetch};
 });

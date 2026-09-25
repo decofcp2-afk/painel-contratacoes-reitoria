@@ -1,7 +1,8 @@
 # Consulta pública de itens e saldos de ARP
 
 O painel estático usa este Apps Script somente como ponte de leitura para os
-endpoints públicos `2_consultarARPItem` e `3_consultarUnidadesItem` do módulo
+endpoints públicos `2_consultarARPItem`, `3_consultarUnidadesItem` e
+`5_consultarAdesoesItem` do módulo
 ARP do Compras.gov.br. O navegador chama o serviço com JSONP porque a API de
 Dados Abertos não envia cabeçalho CORS para o domínio do painel.
 
@@ -13,6 +14,9 @@ para cada ata, UASG e item. A resposta
 da API pode repetir o mesmo saldo para diferentes unidades; a interface não
 soma esses registros. O resultado é informativo e deve ser conferido na origem
 antes de solicitar adesão.
+O total de adesões aprovadas vem do endpoint 5. O saldo individual da unidade
+solicitante, exibido na simulação autenticada do Contratos.gov.br, não é
+calculado pelo painel.
 
 ## Publicação
 

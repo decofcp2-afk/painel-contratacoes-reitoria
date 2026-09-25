@@ -43,7 +43,7 @@ function arpProxy_(p) {
       query.numeroCompra = String(p.numeroCompra);
     }
     endpoint = '2_consultarARPItem';
-  } else if (endpoint === 'saldo') {
+  } else if (endpoint === 'saldo' || endpoint === 'adesoes') {
     var ata = String(p.numeroAta || '');
     var gerenciadora = String(p.unidadeGerenciadora || '');
     var item = String(p.numeroItem || '');
@@ -53,7 +53,7 @@ function arpProxy_(p) {
     query.numeroAta = ata;
     query.unidadeGerenciadora = gerenciadora;
     query.numeroItem = item;
-    endpoint = '3_consultarUnidadesItem';
+    endpoint = endpoint === 'saldo' ? '3_consultarUnidadesItem' : '5_consultarAdesoesItem';
   } else {
     throw new Error('Consulta de ARP não permitida.');
   }

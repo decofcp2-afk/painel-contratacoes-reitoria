@@ -449,6 +449,9 @@
         else if (row.quantidadeHomologadaVencedor != null || row.maximoAdesao != null)
           item.append(element('small', '', [row.quantidadeHomologadaVencedor != null && `Quantidade homologada: ${Number(row.quantidadeHomologadaVencedor).toLocaleString('pt-BR')}`,
             row.maximoAdesao != null && `Máximo de adesão informado na ata: ${Number(row.maximoAdesao).toLocaleString('pt-BR')}`].filter(Boolean).join(' · ')));
+        if (row.codigoItem) item.append(element('small', '', 'Código do item: ' + row.codigoItem));
+        if (row.suppliers.size <= 1 && row.valorUnitario != null && Number.isFinite(Number(row.valorUnitario)))
+          item.append(element('small', '', 'Valor unitário registrado: ' + Number(row.valorUnitario).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})));
         const balance = element('div', 'adhesion-results');
         balance.append(element('p', 'adhesion-note', 'Consultando saldo na fonte oficial…'));
         item.append(balance);
@@ -458,14 +461,18 @@
       status.textContent = `Consultando ${shown} de ${allItems.length} itens desta ata…`;
       for (let start = 0; start < slots.length; start += 3) {
         await Promise.all(slots.slice(start, start + 3).map(async ({row, balance}) => {
-          try {
-            const rows = await adesao.withDeadline(signal => adesao.getBalance(ata, row.numeroItem, adesao.proxyFetch, signal), 65000);
-            if (!panel.isConnected) return;
-            const matching = cnpj ? rows.filter(entry => entry.fornecedor.replace(/\D/g, '').startsWith(cnpj)) : rows;
+          const [saldo, approvals] = await Promise.allSettled([
+            adesao.withDeadline(signal => adesao.getBalance(ata, row.numeroItem, adesao.proxyFetch, signal), 65000),
+            adesao.withDeadline(signal => adesao.getApprovals(ata, row.numeroItem, adesao.proxyFetch, signal), 65000)
+          ]);
+          if (!panel.isConnected) return;
+          if (saldo.status === 'fulfilled') {
+            const matching = cnpj ? saldo.value.filter(entry => entry.fornecedor.replace(/\D/g, '').startsWith(cnpj)) : saldo.value;
             renderBalance(balance, matching);
-          } catch {
-            if (panel.isConnected) balance.replaceChildren(element('p', 'adhesion-note', 'Saldo indisponível agora. Confira este item no Contratos.gov.br.'));
-          }
+          } else balance.replaceChildren(element('p', 'adhesion-note', 'Saldo indisponível agora. Confira este item no Contratos.gov.br.'));
+          if (approvals.status === 'fulfilled')
+            balance.append(element('small', 'adhesion-approvals', 'Adesões aprovadas globalmente para o item: ' + approvals.value.total.toLocaleString('pt-BR')));
+          else balance.append(element('small', 'adhesion-approvals', 'Detalhamento de adesões aprovadas indisponível nesta consulta.'));
         }));
       }
       if (!panel.isConnected) return;

@@ -2,7 +2,7 @@ const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {readFileSync} = require('node:fs');
 const {join} = require('node:path');
-const {context, normalizeItem, percentage, withDeadline, listItems, getBalance, proxyFetch} = require('../atas-adesao');
+const {context, normalizeItem, percentage, withDeadline, listItems, getBalance, getApprovals, proxyFetch} = require('../atas-adesao');
 
 const ata = {
   numeroAtaRegistroPreco:'00107/2026', codigoUnidadeGerenciadora:'153167',
@@ -50,7 +50,8 @@ test('descoberta dos itens filtra outra ata, UASG e registros excluídos', async
     ], totalPaginas:1})};
   };
   const items = await listItems(ata, fetcher);
-  assert.deepEqual(items, [{numeroItem:'1', descricao:'Livro'}]);
+  assert.deepEqual(items, [{numeroItem:'1', descricao:'Livro', codigoItem:'',
+    valorUnitario:null, quantidadeHomologadaVencedor:null, maximoAdesao:null}]);
   assert.equal(request.pathname, '/modulo-arp/2_consultarARPItem');
   assert.equal(request.searchParams.get('numeroCompra'), '90007');
   assert.equal(request.searchParams.get('dataVigenciaInicialMin'), '2026-05-19');
@@ -99,7 +100,23 @@ test('API atual usa saldoAdesoes e repete o saldo nas unidades sem somá-lo', as
   assert.equal(rows[0].codigoItem, '10361');
 });
 
-test('consulta no proxy aceita apenas os dois endpoints oficiais de ARP', async () => {
+test('adesões aprovadas são somadas por item sem misturar outra ata', async () => {
+  const fetcher = async url => {
+    const q = new URL(url);
+    assert.equal(q.pathname, '/modulo-arp/5_consultarAdesoesItem');
+    assert.equal(q.searchParams.get('numeroItem'), '00001');
+    return {ok:true, json:async () => ({resultado:[
+      {numeroAta:'00107/2026',unidadeGerenciadora:'153167',unidadeNaoParticipante:'123456',quantidadeAprovadaAdesao:4},
+      {numeroAta:'00107/2026',unidadeGerenciadora:'153167',unidadeNaoParticipante:'123456',quantidadeAprovadaAdesao:6},
+      {numeroAta:'00108/2026',unidadeGerenciadora:'153167',unidadeNaoParticipante:'999999',quantidadeAprovadaAdesao:100}
+    ], totalPaginas:1})};
+  };
+  const approvals = await getApprovals(ata, '00001', fetcher);
+  assert.equal(approvals.total, 10);
+  assert.equal(approvals.byUnit.get('123456'), 10);
+});
+
+test('consulta no proxy aceita apenas endpoints oficiais de ARP', async () => {
   const calls = [];
   const gateway = {chamarApi:async (...args) => {
     calls.push(args);
@@ -108,6 +125,8 @@ test('consulta no proxy aceita apenas os dois endpoints oficiais de ARP', async 
   const response = await proxyFetch('https://dadosabertos.compras.gov.br/modulo-arp/3_consultarUnidadesItem?numeroAta=00107%2F2026&unidadeGerenciadora=153167&numeroItem=00001', {}, gateway);
   assert.equal((await response.json()).totalPaginas, 0);
   assert.equal(calls[0][1].endpoint, 'saldo');
+  await proxyFetch('https://dadosabertos.compras.gov.br/modulo-arp/5_consultarAdesoesItem?numeroAta=00107%2F2026&unidadeGerenciadora=153167&numeroItem=00001', {}, gateway);
+  assert.equal(calls[1][1].endpoint, 'adesoes');
   await assert.rejects(proxyFetch('https://example.com/modulo-arp/3_consultarUnidadesItem', {}, gateway), /Fonte/);
 });
 

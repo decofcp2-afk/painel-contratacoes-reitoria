@@ -160,6 +160,7 @@ h1 { margin: 0 0 6px; color: var(--navy); font-size: clamp(29px, 3.5vw, 38px); l
 .adhesion-balance { display: grid; gap: 5px; margin-top: 8px; padding: 12px; border: 1px solid #d9e4f1; border-radius: 8px; background: #fff; color: var(--navy); line-height: 1.4; }
 .adhesion-balance span, .adhesion-balance small { color: var(--muted); font-size: 11px; }
 .adhesion-value { color: #126045; font-size: 13px; }
+.adhesion-approvals { display: block; margin: 7px 0 10px; color: var(--muted); font-size: 11px; }
 .adhesion-open:focus-visible, .adhesion-button:focus-visible, .adhesion-retry:focus-visible { outline: 3px solid #95bdf2; outline-offset: 2px; }
 .missing-link { color: var(--muted); font-size: 11px; }
 .cell-label { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
