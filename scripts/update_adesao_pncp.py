@@ -2,6 +2,7 @@
 """Guarda o indicador público de adesão das atas do Colégio Pedro II."""
 import datetime as dt
 import gzip
+import http.client
 import json
 import os
 import time
@@ -24,7 +25,8 @@ def request_json(url):
             with urllib.request.urlopen(request, timeout=25) as response:
                 body = response.read()
                 return json.loads(gzip.decompress(body) if body.startswith(b"\x1f\x8b") else body)
-        except (urllib.error.HTTPError, urllib.error.URLError, OSError):
+        except (urllib.error.HTTPError, urllib.error.URLError, OSError,
+                http.client.HTTPException):
             if attempt == 3:
                 raise
             time.sleep(2 ** attempt)
