@@ -77,7 +77,20 @@ def collect(fetch=request_json, now=None):
 
 
 def main():
-    payload = collect()
+    try:
+        payload = collect()
+    except (urllib.error.URLError, OSError, http.client.HTTPException) as error:
+        # Só tolera indisponibilidade externa quando existe um cache válido.
+        previous = json.loads(OUTPUT.read_text(encoding="utf-8"))
+        items = previous.get("items")
+        if (previous.get("source") != BASE or not previous.get("generatedAt")
+                or not isinstance(items, dict) or not items
+                or any(not isinstance(key, str) or not isinstance(value, bool)
+                       for key, value in items.items())):
+            raise ValueError("Arquivo anterior de adesão ausente ou inválido") from error
+        print(f"::warning::PNCP indisponível após 4 tentativas ({type(error).__name__}); "
+              f"preservados {len(items)} indicadores de {previous['generatedAt']}")
+        return
     temporary = OUTPUT.with_suffix(".json.tmp")
     temporary.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     os.replace(temporary, OUTPUT)
