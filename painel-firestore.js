@@ -125,7 +125,36 @@
       var d0Simulado = false;
       if (!d0) { d0 = new Date(filaCursor.getTime()); d0Simulado = true; }
 
-      var etps = etapasPorProc[pid] || [];
+      // Deriva as mesmas condicionais do App Gestão antes de calcular prazo
+      // e percentual, inclusive quando o status gravado ainda é antigo.
+      var tipoNorm = _capNormText(tipoCD);
+      var ehCD = modalAbrev(modal) === 'CD';
+      var adesao = ehCD && tipoNorm.indexOf('adesao') >= 0;
+      var semFaseExterna = ehCD && tipoNorm.indexOf('dispensa') < 0;
+      var etps = (etapasPorProc[pid] || []).map(function (e) {
+        var et = Object.assign({}, e);
+        var n = _capNormText(et.etapa);
+        var irp = n.indexOf('irp') >= 0;
+        var minuta = n.indexOf('minuta') >= 0;
+        var versao = n.indexOf('versao final') >= 0;
+        var externa = n.indexOf('fase externa') >= 0;
+        var gerenciada = irp || minuta || versao || externa;
+        var naoAplica = (irp && (!temIRP || adesao))
+          || (adesao && (minuta || versao)) || (externa && semFaseExterna);
+        var st = normalizeStatus(et.status);
+        if (_capIsRetornoFilaMotivo(et.motivoAtraso)) {
+          if (st === 'naoaplica') et.status = 'Não iniciada';
+        } else if (st !== 'ok') {
+          if (naoAplica) et.status = 'Não se aplica';
+          else if (gerenciada && st === 'naoaplica') et.status = 'Não iniciada';
+        }
+        if (ehCD && (n.indexOf('adequac') >= 0 || n.indexOf('procuradoria') >= 0)) {
+          et.etapa = p.procuradoria === 'Não' || p.procuradoria === false
+            ? 'Adequações finais dos documentos'
+            : 'Adequações finais dos documentos e envio à Procuradoria';
+        }
+        return et;
+      });
       if (!etps.length) return null;
 
       var etpsFiltradas = etps.filter(function (e) {
@@ -211,11 +240,11 @@
       var statusGeral;
       if (temRetorno) statusGeral = 'fila';
       else if (d0Simulado) statusGeral = 'planejamento';
+      else if (execucao === 100) statusGeral = 'ok';
       else if (temAtrasada) statusGeral = 'atrasado';
       else if (temAguardando) statusGeral = 'aguardando';
       else if (temParalisado) statusGeral = 'paralisado';
       else if (temAndamento) statusGeral = 'andamento';
-      else if (execucao === 100) statusGeral = 'ok';
       else if (statusBase === 'planejamento') statusGeral = 'planejamento';
       else statusGeral = statusBase || 'planejamento';
 
