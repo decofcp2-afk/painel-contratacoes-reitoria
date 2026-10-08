@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
   const fields = ['objeto', 'numero', 'ano', 'compra', 'adesao'];
   const nationalFields = ['uf', 'esfera', 'poder'];
-  const labels = {objeto:'Objeto', numero:'Ata', ano:'Ano da ata', compra:'Compra', adesao:'Permite adesão', uf:'Estado', esfera:'Esfera', poder:'Poder', orgao:'Órgão'};
+  const labels = {objeto:'Busca', numero:'Ata', ano:'Ano da ata', compra:'Compra', adesao:'Permite adesão', uf:'Estado', esfera:'Esfera', poder:'Poder', orgao:'Órgão'};
   const statusLabels = {vigente:'Vigente', 'nao-vigente':'Não vigente', indefinida:'Situação a conferir'};
   let items = [];
   let loaded = false;
@@ -222,6 +222,10 @@
   }
 
   function updateScopeHelp(unit) {
+    const national = unit.codigo === ALL_UNITS;
+    $('search-label').textContent = national ? 'Buscar por objeto ou número da ata' : 'Buscar por objeto, ata ou compra';
+    $('objeto').placeholder = national ? 'Ex.: vigilância ou 01312/2026' : 'Ex.: vigilância, 01312/2026 ou 00312/2026';
+    $('search-help').hidden = !national;
     $('orgao-help').textContent = unit.codigo !== ALL_UNITS && isCPII(unit)
       ? 'Órgão da UASG selecionada. Alterar este filtro abre a busca em Todas as UASGs.'
       : 'Digite pelo menos três caracteres e selecione uma sugestão.';
@@ -438,7 +442,7 @@
     }
     if (!result.length) {
       empty(selectedUnit.codigo === ALL_UNITS
-        ? 'Nenhuma ata desta página corresponde aos filtros. Avance ou refine o objeto pesquisado.'
+        ? 'Nenhuma ata desta página corresponde aos filtros. Avance ou refine a busca.'
         : 'Tente mudar o status, usar menos palavras ou limpar os filtros.', 'Nenhuma ata encontrada');
       return;
     }

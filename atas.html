@@ -12,9 +12,9 @@
   <title>Consulta de atas | Colégio Pedro II</title>
   <script src="config.js?v=arp-20260925" defer></script>
   <script src="data-gateway.js?v=arp-20260925b" defer></script>
-  <script src="atas-logic.js?v=20261008" defer></script>
+  <script src="atas-logic.js?v=20261008-2" defer></script>
   <script src="atas-pncp.js?v=20261008" defer></script>
-  <script src="atas-ui.js?v=20261008" defer></script>
+  <script src="atas-ui.js?v=20261008-2" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -46,8 +46,9 @@
     <section class="search-panel" aria-label="Filtros da consulta de atas">
       <div class="primary-filters">
         <div class="field keyword-field">
-          <label for="objeto">Buscar pelo objeto</label>
-          <div class="search-input"><span aria-hidden="true">⌕</span><input id="objeto" type="search" placeholder="Ex.: material de limpeza, mobiliário, serviços…" autocomplete="off"></div>
+          <label id="search-label" for="objeto">Buscar por objeto, ata ou compra</label>
+          <div class="search-input"><span aria-hidden="true">⌕</span><input id="objeto" type="search" placeholder="Ex.: vigilância, 01312/2026 ou 00312/2026" autocomplete="off" aria-describedby="search-help"></div>
+          <small id="search-help" hidden>Para buscar pelo número da compra ou ignorar zeros à esquerda, selecione uma UASG.</small>
         </div>
         <fieldset class="status-field">
           <legend>Situação da ata</legend>

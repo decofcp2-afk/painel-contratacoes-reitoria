@@ -26,6 +26,40 @@ test('busca de objeto ignora acentos, caixa e ordem; ano da compra não vira ano
   assert.equal(ataYear(ata({numeroAtaRegistroPreco:'12', dataAssinatura:'2025-05-01'})), '2025');
 });
 
+test('campo principal encontra número da ata ou da compra, com e sem zeros à esquerda', () => {
+  const records = [
+    ata({numeroAtaRegistroPreco:'01312/2026', numeroCompra:312, anoCompra:2026, objeto:'Serviços de Vigilância'}),
+    ata({numeroAtaRegistroPreco:'02312/2026', numeroCompra:312, anoCompra:2026, objeto:'Serviços de Vigilância'}),
+    ata({numeroAtaRegistroPreco:'01123/2026', numeroCompra:90011, anoCompra:2026, objeto:'Material esportivo'}),
+    ata({numeroAtaRegistroPreco:'01312/2025', numeroCompra:312, anoCompra:2025, objeto:'Serviços de Vigilância'})
+  ];
+  const search = objeto => filterAtas(records, {objeto, status:'todos'}, '2026-09-23').map(a => a.numeroAtaRegistroPreco);
+  for (const query of ['01312/2026', '1312/2026', '01312 / 2026'])
+    assert.deepEqual(search(query), ['01312/2026']);
+  for (const query of ['00312/2026', '312/2026', '00312 / 2026'])
+    assert.deepEqual(search(query), ['01312/2026', '02312/2026']);
+  for (const query of ['90011', '90011/2026', '01123/2026', '1123/2026'])
+    assert.deepEqual(search(query), ['01123/2026']);
+  assert.deepEqual(search('00312/2024'), []);
+});
+
+test('campo principal combina palavras e números e mantém os demais filtros', () => {
+  const records = [ata({numeroAtaRegistroPreco:'00012/2025'}), ata({numeroAtaRegistroPreco:'13/2025', possibilidadeAdesao:true})];
+  const filters = {objeto:'ESCOLAR 090011/2024 aquisicao', status:'vigente'};
+  assert.equal(filterAtas(records, filters, '2026-09-23').length, 2);
+  assert.deepEqual(filterAtas(records, {...filters, numero:'12/2025'}, '2026-09-23').map(a => a.numeroAtaRegistroPreco), ['00012/2025']);
+  assert.equal(filterAtas(records, {...filters, compra:'90011/2023'}, '2026-09-23').length, 0);
+  assert.equal(filterAtas(records, {...filters, ano:'2024'}, '2026-09-23').length, 0);
+  assert.equal(filterAtas(records, {...filters, status:'nao-vigente'}, '2026-09-23').length, 0);
+  assert.equal(filterAtas(records, {...filters, adesao:'sim'}, '2026-09-23').length, 1);
+  assert.equal(filterAtas(records, {...filters, objeto:'escolar 99/2025'}, '2026-09-23').length, 0);
+});
+
+test('campo principal continua encontrando números escritos no objeto', () => {
+  assert.equal(filterAtas([ata({objeto:'Aquisição de 100 cadeiras'})], {objeto:'100 cadeiras', status:'todos'}, '2026-09-23').length, 1);
+  assert.equal(filterAtas([ata({objeto:'Material de limpeza / manutenção'})], {objeto:'limpeza / manutenção', status:'todos'}, '2026-09-23').length, 1);
+});
+
 test('Todos inclui situação não confirmada; status específicos excluem', () => {
   const records = [ata(), ata({numeroAtaRegistroPreco:'13/2025', dataVigenciaFinal:''})];
   const f = {objeto:'', numero:'', ano:'', compra:'', status:'todos'};

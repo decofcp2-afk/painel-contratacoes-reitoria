@@ -38,19 +38,30 @@
     return typeof value === 'boolean' ? value : null;
   }
 
+  function normalizeNumber(value) {
+    return normalize(value).replace(/\s*([/-])\s*/g, '$1')
+      .replace(/\d+/g, digits => digits.replace(/^0+(?=\d)/, ''));
+  }
+
   function filterAtas(items, filters, today, permissionForAta = adhesionPermission) {
-    const objectTerms = normalize(filters.objeto).split(/\s+/).filter(Boolean);
-    const number = normalize(filters.numero);
-    const purchase = normalize(filters.compra).replace(/^0+(?=\d)/, '');
+    const searchTerms = normalize(filters.objeto).replace(/(\d)\s*([/-])\s*(?=\d)/g, '$1$2').split(/\s+/).filter(Boolean);
+    const number = normalizeNumber(filters.numero);
+    const purchase = normalizeNumber(filters.compra);
     const result = items.filter(ata => {
       const status = situation(ata, today);
+      const object = normalize(ata.objeto);
+      const ataNumber = normalizeNumber(ata.numeroAtaRegistroPreco);
+      const purchaseNumber = normalizeNumber([ata.numeroCompra, ata.anoCompra].filter(Boolean).join('/'));
+      const matchesSearch = searchTerms.every(term => object.includes(term) ||
+        (/^[\d/-]+$/.test(term) &&
+          (ataNumber.includes(normalizeNumber(term)) || purchaseNumber.includes(normalizeNumber(term)))));
       return (filters.status === 'todos' || status === filters.status) &&
         (filters.adesao !== 'sim' || permissionForAta(ata) === true) &&
         (filters.adesao !== 'nao' || permissionForAta(ata) === false) &&
-        objectTerms.every(term => normalize(ata.objeto).includes(term)) &&
-        (!number || normalize(ata.numeroAtaRegistroPreco).includes(number)) &&
+        matchesSearch &&
+        (!number || ataNumber.includes(number)) &&
         (!filters.ano || ataYear(ata) === filters.ano) &&
-        (!purchase || normalize([ata.numeroCompra, ata.anoCompra].filter(Boolean).join('/')).replace(/^0+(?=\d)/, '').includes(purchase));
+        (!purchase || purchaseNumber.includes(purchase));
     });
     // O objeto é o primeiro critério de organização; as atas do mesmo objeto ficam juntas.
     return result.sort((a, b) => normalize(a.objeto).localeCompare(normalize(b.objeto), 'pt-BR') ||
