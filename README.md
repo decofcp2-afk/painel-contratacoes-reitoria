@@ -263,3 +263,10 @@ Assim, o Painel pode crescer para varios campi sem transformar o site publico em
 - Se aparecer erro de CORS, confirme se o painel esta usando JSONP e nao `fetch` comum.
 - Se o GitHub Pages nao atualizar, aguarde alguns minutos e confira a aba `Actions` do repositorio.
 - Se mudar o nome do repositorio, atualize tambem links do README e qualquer atalho salvo no navegador.
+
+
+### Atas recentes e fontes oficiais
+
+A consulta combina os Dados Abertos do Compras.gov.br com a API direta de consultas do PNCP. A publicação no PNCP pode anteceder a disponibilidade na API ARP. O número da compra é obtido nos detalhes da contratação; o sequencial PNCP não é tratado como número do pregão. A deduplicação usa o número de controle da ata e cancelamentos do PNCP prevalecem.
+
+A base da Reitoria é atualizada a cada hora pelo workflow `update-atas.yml`. Ao abrir a consulta por UASG, a tela também verifica as atas do ano corrente no PNCP. Se essa verificação falhar, a base publicada permanece disponível com aviso de cobertura parcial.

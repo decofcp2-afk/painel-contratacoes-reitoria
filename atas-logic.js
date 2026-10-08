@@ -41,7 +41,7 @@
   function filterAtas(items, filters, today, permissionForAta = adhesionPermission) {
     const objectTerms = normalize(filters.objeto).split(/\s+/).filter(Boolean);
     const number = normalize(filters.numero);
-    const purchase = normalize(filters.compra);
+    const purchase = normalize(filters.compra).replace(/^0+(?=\d)/, '');
     const result = items.filter(ata => {
       const status = situation(ata, today);
       return (filters.status === 'todos' || status === filters.status) &&
@@ -50,7 +50,7 @@
         objectTerms.every(term => normalize(ata.objeto).includes(term)) &&
         (!number || normalize(ata.numeroAtaRegistroPreco).includes(number)) &&
         (!filters.ano || ataYear(ata) === filters.ano) &&
-        (!purchase || normalize([ata.numeroCompra, ata.anoCompra].filter(Boolean).join('/')).includes(purchase));
+        (!purchase || normalize([ata.numeroCompra, ata.anoCompra].filter(Boolean).join('/')).replace(/^0+(?=\d)/, '').includes(purchase));
     });
     // O objeto é o primeiro critério de organização; as atas do mesmo objeto ficam juntas.
     return result.sort((a, b) => normalize(a.objeto).localeCompare(normalize(b.objeto), 'pt-BR') ||

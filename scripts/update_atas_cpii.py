@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 
-from update_atas import ENDPOINT, collect
+from update_atas import ENDPOINT, collect_combined
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "uasg-catalog.json"
@@ -28,7 +28,7 @@ def cpii_units(payload):
     return sorted(codes)
 
 
-def build(catalog, gather=collect, now=None):
+def build(catalog, gather=collect_combined, now=None):
     now = now or dt.datetime.now(dt.timezone.utc)
     items = []
     codes = cpii_units(catalog)

@@ -1,13 +1,14 @@
 name: Atualizar atas do CPII
 on:
   schedule:
-    - cron: '23 8 * * *'
+    - cron: '23 * * * *'
   workflow_dispatch:
   push:
     branches:
-      - feat/consulta-atas-cpii
+      - main
     paths:
       - scripts/update_atas.py
+      - scripts/update_atas_pncp.py
       - .github/workflows/update-atas.yml
 permissions:
   contents: write
@@ -20,7 +21,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Consultar todas as páginas da API
-        run: python scripts/update_atas.py
+        run: |
+          python -m unittest discover -s tests -p 'test_*.py'
+          python scripts/update_atas.py
       - name: Publicar atualização no repositório
         run: |
           if git diff --quiet -- atas-data.json; then exit 0; fi
@@ -28,4 +31,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add atas-data.json
           git commit -m 'dados: atualizar atas públicas do CPII'
+          git pull --rebase
           git push

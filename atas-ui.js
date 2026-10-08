@@ -503,6 +503,26 @@
     return {items:payload.items.filter(ata => String(ata.codigoUnidadeGerenciadora) === code), generatedAt:payload.generatedAt, cached:true};
   }
 
+  async function loadUnit(unit, signal) {
+    const payload = unit.codigo === DEFAULT_UNIT ? await loadDefault(signal) :
+      isCPII(unit) ? await loadCPII(unit.codigo, signal) : await loadFromCompras(unit.codigo, signal);
+    const cnpj = unit.cnpjOrgao || (isCPII(unit) ? '42414284000102' : '');
+    if (!cnpj) return payload;
+    const request = new AbortController();
+    const abort = () => request.abort();
+    signal.addEventListener('abort', abort, {once:true});
+    const timer = setTimeout(abort, 20000);
+    try {
+      return await window.AtasPNCP.supplement(payload, {cnpj, uasg:unit.codigo, signal:request.signal});
+    } catch (error) {
+      if (signal.aborted) throw error;
+      return {...payload, recentUnavailable:true};
+    } finally {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', abort);
+    }
+  }
+
   async function loadNational(f, page, signal) {
     const url = logic.nationalSearchUrl(f, page, PAGE_SIZE);
     let response;
@@ -584,16 +604,15 @@
     const timeout = setTimeout(() => request.abort(), unit.codigo === ALL_UNITS ? 30000 : 90000);
     try {
       const f = filters();
+      const cachedUnit = unitCache.get(unit.codigo);
       const payload = unit.codigo === ALL_UNITS ? await loadNational(f, nationalPage, request.signal) :
-        unitCache.get(unit.codigo) ||
-        (unit.codigo === DEFAULT_UNIT ? await loadDefault(request.signal) :
-          isCPII(unit) ? await loadCPII(unit.codigo, request.signal) :
-            await loadFromCompras(unit.codigo, request.signal));
+        (cachedUnit && Date.now() - cachedUnit.loadedAt < 60000 ? cachedUnit : null) ||
+        await loadUnit(unit, request.signal);
       if (unit.codigo !== ALL_UNITS && f.adesao !== 'todos' && permissionLoad) await permissionLoad;
       if (currentRequest !== request) return;
       if (unit.codigo === ALL_UNITS) nationalTotal = payload.total;
       else {
-        unitCache.set(unit.codigo, payload);
+        unitCache.set(unit.codigo, {...payload, loadedAt:Date.now()});
         if (unitCache.size > 4) unitCache.delete(unitCache.keys().next().value);
       }
       items = payload.items;
@@ -603,7 +622,7 @@
         const stamp = new Intl.DateTimeFormat('pt-BR',
           {timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(payload.generatedAt));
         const delayed = Date.now() - new Date(payload.generatedAt).valueOf() > 48 * 60 * 60 * 1000;
-        $('updated-at').textContent = `${payload.cached ? 'Dados atualizados' : 'Consulta realizada'} em ${stamp} (horário de Brasília)${delayed ? ' · Confira a ata no PNCP' : ''}`;
+        $('updated-at').textContent = `${payload.cached ? 'Dados atualizados' : 'Consulta realizada'} em ${stamp} (horário de Brasília)${payload.recentUnavailable ? ' · Consulta de atas recentes indisponível; exibindo a última base publicada' : delayed ? ' · Confira a ata no PNCP' : ''}`;
       }
       render();
       renderPagination();

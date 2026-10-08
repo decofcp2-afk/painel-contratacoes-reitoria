@@ -76,11 +76,28 @@ def collect(fetch=fetch_page, now=None, uasg=UASG):
 
 
 def main():
-    payload = collect()
+    payload = collect_combined()
     temporary = OUTPUT.with_suffix(".json.tmp")
     temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary, OUTPUT)
     print(f"Atualizadas {len(payload['items'])} atas da UASG {UASG}")
+
+
+def collect_combined(now=None, uasg=UASG):
+    try:
+        from .update_atas_pncp import supplement
+    except ImportError:
+        from update_atas_pncp import supplement
+    try:
+        payload = collect(now=now, uasg=uasg)
+    except ValueError as error:
+        if "não retornou atas" not in str(error):
+            raise
+        payload = {"source": ENDPOINT, "scope": f"Atas gerenciadas pela UASG {uasg}", "items": []}
+    payload = supplement(payload, now=now, uasg=uasg)
+    if not payload["items"]:
+        raise ValueError("A API não retornou atas; arquivo anterior preservado")
+    return payload
 
 
 if __name__ == "__main__":

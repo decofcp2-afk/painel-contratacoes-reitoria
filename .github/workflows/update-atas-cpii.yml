@@ -8,6 +8,8 @@ on:
       - '**'
     paths:
       - scripts/update_atas_cpii.py
+      - scripts/update_atas.py
+      - scripts/update_atas_pncp.py
       - .github/workflows/update-atas-cpii.yml
 permissions:
   contents: write
@@ -28,4 +30,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add atas-cpii-data.json
           git commit -m 'dados: atualizar atas dos campi do CPII'
+          git pull --rebase
           git push
