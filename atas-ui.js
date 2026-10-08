@@ -541,7 +541,8 @@
     const data = await response.json();
     if (!Array.isArray(data.items) || !Number.isSafeInteger(data.total) || data.total < 0 ||
         data.items.length > PAGE_SIZE) throw new Error('Resposta inesperada do PNCP');
-    return {items:data.items.filter(record => record && record.document_type === 'ata').map(logic.mapPNCPRecord),
+    const records = data.items.filter(record => record && record.document_type === 'ata').map(logic.mapPNCPRecord);
+    return {items:await window.AtasPNCP.resolvePurchases(records, {signal}),
       total:data.total, generatedAt:new Date().toISOString(), cached:false};
   }
 

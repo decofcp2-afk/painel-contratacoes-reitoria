@@ -74,5 +74,42 @@
     return {...payload, items:[...records.values(), ...payload.items.filter(r => !r.numeroControlePncpAta)],
       generatedAt:now.toISOString(), cached:false};
   }
-  return {purchasePath, mapRecord, supplement};
+  async function resolvePurchases(items, {signal, fetcher = globalThis.fetch} = {}) {
+    if (signal?.aborted) throw signal.reason || new Error('Consulta cancelada');
+    const purchases = new Map();
+    const pending = [...new Set(items.map(ata => ata.numeroControlePncpCompra)
+      .filter(id => /^\d{14}-1-\d+\/\d{4}$/.test(String(id || ''))))];
+    if (!pending.length) return items;
+    const request = new AbortController();
+    const abort = () => request.abort();
+    signal?.addEventListener('abort', abort, {once:true});
+    const timer = setTimeout(abort, 8000);
+    async function worker() {
+      while (pending.length) {
+        const id = pending.shift();
+        try {
+          const response = await fetcher(BASE + purchasePath(id), {signal:request.signal});
+          if (!response.ok) continue;
+          const purchase = await response.json();
+          if (purchase.numeroControlePNCP === id && purchase.numeroCompra && purchase.anoCompra)
+            purchases.set(id, purchase);
+        } catch (error) {
+          if (signal?.aborted) throw error;
+          // A ata continua disponível; um número ausente não vira o sequencial PNCP.
+        }
+      }
+    }
+    try {
+      await Promise.all(Array.from({length:Math.min(4, pending.length)}, worker));
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
+    }
+    return items.map(ata => {
+      const purchase = purchases.get(ata.numeroControlePncpCompra);
+      return purchase && String(purchase.unidadeOrgao?.codigoUnidade) === String(ata.codigoUnidadeGerenciadora)
+        ? {...ata, numeroCompra:String(purchase.numeroCompra), anoCompra:String(purchase.anoCompra)} : ata;
+    });
+  }
+  return {purchasePath, mapRecord, supplement, resolvePurchases};
 });

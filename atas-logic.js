@@ -81,9 +81,11 @@
       dataVigenciaInicial:record.data_inicio_vigencia,
       dataVigenciaFinal:record.data_fim_vigencia,
       dataAssinatura:record.data_assinatura,
-      numeroCompra:record.numero_sequencial_compra_ata,
-      anoCompra:record.ano,
+      // O sequencial PNCP identifica a compra na API, mas não é seu número oficial.
+      numeroCompra:record.numeroCompra || '',
+      anoCompra:record.numeroCompra ? record.ano : '',
       numeroControlePncpAta:record.numero_controle_pncp,
+      numeroControlePncpCompra:String(record.numero_controle_pncp || '').replace(/-\d+$/, ''),
       possibilidadeAdesao:adhesionPermission(record),
       linkAtaPNCP,
       origemConsulta:'pncp',
