@@ -143,7 +143,7 @@ test('consulta no proxy aceita apenas endpoints oficiais de ARP', async () => {
 test('página oferece filtro de permissão sem saldo interno', () => {
   const html = readFileSync(join(__dirname, '..', 'atas.html'), 'utf8');
   assert.match(html, /id="adesao"/);
-  assert.match(html, /option value="sim" selected/);
+  assert.match(html, /option value="todos" selected/);
   assert.match(html, /id="national-filters"/);
   assert.doesNotMatch(html, /script src="atas-adesao.js/);
   assert.doesNotMatch(html, /id="arp-form"|id="arp-cnpj"/);
