@@ -210,4 +210,9 @@ h1 { margin: 0 0 6px; color: var(--navy); font-size: clamp(29px, 3.5vw, 38px); l
   .status-options span { padding: 0 3px; font-size: 10px; }
 }
 
-.atas-guidance{margin:0 0 24px;padding:20px 24px;background:#eaf0f7;border-radius:10px;color:#244361}.atas-guidance h2{font-size:16px;margin:0 0 10px}.atas-guidance p{font-size:14px;line-height:1.65;margin:8px 0;max-width:95ch}@media(max-width:600px){.atas-guidance{padding:16px}.atas-guidance p{font-size:13px}}
+.atas-guidance{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:24px;margin:0 0 24px;padding:20px 24px;background:#eaf0f7;border-radius:10px;color:#244361}
+.atas-guidance h2{font-size:16px;line-height:1.4;margin:0 0 8px}
+.atas-guidance p{font-size:14px;line-height:1.65;margin:0;max-width:75ch}
+.atas-guidance-next{padding-left:24px;border-left:1px solid #c7d6e6}
+@media(max-width:800px){.atas-guidance{grid-template-columns:1fr;gap:16px}.atas-guidance-next{padding:16px 0 0;border-left:0;border-top:1px solid #c7d6e6}}
+@media(max-width:600px){.atas-guidance{padding:16px}.atas-guidance p{font-size:13px}}

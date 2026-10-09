@@ -12,7 +12,7 @@ Destinos: Painel, Atas, Contratos no SUAP, Notas Técnicas e Portarias, Manuais 
 
 `documentos.html` pesquisa por título, número e assunto, com filtro de categoria. `documentos.json` preserva os links das portarias que já estavam no menu. A lista é complementada por documentos explicitamente publicados pelo administrador no App Gestão. Ausência de notas técnicas tem mensagem própria; a interface não inventa documentos.
 
-`solicitar.html` incorpora o formulário público do Apps Script. Até cinco arquivos PDF/JPG/PNG, até 5 MB cada e 10 MB no total. O administrador recebe avisos em `decof@cp2.g12.br`. Anexos privados ficam temporariamente no Drive e são excluídos ao atender; protocolo, resposta e histórico permanecem. Sem Firebase Storage. A ativação depende da autorização do Drive na conta proprietária e da configuração pelo administrador.
+`solicitar.html` apresenta o formulário diretamente na página e usa requisições HTTP sem cookies para o Apps Script, evitando conflitos entre contas Google conectadas. Até cinco arquivos PDF/JPG/PNG, até 5 MB cada e 10 MB no total. O administrador recebe avisos em `decof@cp2.g12.br`. Anexos privados ficam temporariamente no Drive e são excluídos ao atender; protocolo, resposta e histórico permanecem. Sem Firebase Storage. A ativação depende da autorização do Drive na conta proprietária e da configuração pelo administrador.
 
 ## Consulta de atas
 
@@ -23,7 +23,7 @@ Orientação permanente acima dos filtros: fontes da consulta, verificação de 
 - [x] Página inicial, brasão, navegação e manuais expansíveis.
 - [x] Painel preservado em endereço próprio e cabeçalho simplificado.
 - [x] Orientação permanente na consulta de atas.
-- [x] Biblioteca pública, pesquisa e formulário incorporado.
+- [x] Biblioteca pública, pesquisa e formulário público.
 - [x] Backend e tela administrativa no repositório App Gestão.
 - [x] Análise de banco separada da implantação.
 - [x] Autorização do Drive, ativação e conferência operacional na conta institucional.
@@ -31,3 +31,5 @@ Orientação permanente acima dos filtros: fontes da consulta, verificação de 
 Validar testes de ambos os repositórios, console e navegação no navegador, largura móvel e implantação do GitHub Pages. O backend é publicado pelo workflow do App Gestão, preservando a URL existente.
 
 Validação concluída: 220 testes do App Gestão, 62 testes JavaScript do Painel e 11 testes Python. Publicações confirmadas no GitHub Pages e no Apps Script (versão 114). Formulário ativo, biblioteca carregada e navegação conferida em largura móvel. E-mail configurado para `decof@cp2.g12.br`; não foi enviado um pedido fictício de teste.
+
+Correção de 09/10/2026: o aviso de atas foi dividido em explicação e orientação, lado a lado em telas largas e empilhadas abaixo de 800 px. O formulário de notas deixou de usar iframe; preparação e envio mantêm nonce, limites, idempotência e validação no servidor.
