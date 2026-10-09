@@ -26,6 +26,8 @@ Orientação permanente acima dos filtros: fontes da consulta, verificação de 
 - [x] Biblioteca pública, pesquisa e formulário incorporado.
 - [x] Backend e tela administrativa no repositório App Gestão.
 - [x] Análise de banco separada da implantação.
-- [ ] Autorização do Drive, ativação e conferência operacional na conta institucional.
+- [x] Autorização do Drive, ativação e conferência operacional na conta institucional.
 
 Validar testes de ambos os repositórios, console e navegação no navegador, largura móvel e implantação do GitHub Pages. O backend é publicado pelo workflow do App Gestão, preservando a URL existente.
+
+Validação concluída: 220 testes do App Gestão, 62 testes JavaScript do Painel e 11 testes Python. Publicações confirmadas no GitHub Pages e no Apps Script (versão 114). Formulário ativo, biblioteca carregada e navegação conferida em largura móvel. E-mail configurado para `decof@cp2.g12.br`; não foi enviado um pedido fictício de teste.
