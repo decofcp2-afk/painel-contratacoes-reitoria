@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<!-- ════════════════════════════════════════════════════════════════════
+     Fases 0 e 3 do PLANO_SEGURANCA.md — Content-Security-Policy.
+     Restringe de onde scripts/estilos/conexões podem vir, mitigando XSS e
+     injeção de recursos externos. FASE 3 (2026-06-24): script-src SEM
+     'unsafe-inline' — todo JS é externo (painel-core.js/painel-ui.js) e os
+     handlers foram migrados para addEventListener; injeção de <script> fica
+     bloqueada. 'unsafe-inline' permanece SÓ em style-src (estilos inline
+     dinâmicos do Gantt — baixo risco).
+     Origens cobrem o uso atual: gstatic (Firebase), script.google(usercontent)
+     (Apps Script + JSONP/redirect) e *.googleapis (Firestore).
+     NOTA: GitHub Pages (estático) → CSP só via <meta>; report-only não é
+     suportado por meta. VERIFICAR EM NAVEGADOR antes de tirar o PR de draft.
+═══════════════════════════════════════════════════════════════════════ -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' https://www.gstatic.com https://script.google.com https://script.googleusercontent.com;
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data: blob:;
+  font-src 'self' data:;
+  connect-src 'self' https://script.google.com https://script.googleusercontent.com https://*.googleapis.com https://*.firebaseio.com;
+  frame-src 'self';
+  base-uri 'self';
+  object-src 'none';
+  form-action 'self' https://script.google.com;
+  manifest-src 'self';
+  worker-src 'self';
+">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a3a5c">
+<meta name="description" content="Painel publico da Reitoria para acompanhamento de contratacoes, cronograma, KPIs e capacidade do SEL.">
+<meta property="og:title" content="Painel de Contratacoes - Reitoria / SEL">
+<meta property="og:description" content="Acompanhamento publico das contratacoes da Reitoria: cronograma, Gantt, KPIs e capacidade.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://decofcp2-afk.github.io/painel-contratacoes-reitoria/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Painel de Contratacoes - Reitoria / SEL">
+<meta name="twitter:description" content="Acompanhamento publico das contratacoes da Reitoria: cronograma, Gantt, KPIs e capacidade.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Painel de Contratacoes - Reitoria / SEL</title>
+<!--
+  PAINEL GANTT - Colegio Pedro II / SEL
+  Arquivo: index.html (GitHub Pages)
+  Dados: Apps Script publico somente leitura, configurado em config.js.
+-->
+<style>
+/*
+ * ╔══════════════════════════════════════════════════════════════╗
+ * ║  VARIÁVEIS GLOBAIS — Paleta de cores e medidas do painel    ║
+ * ╚══════════════════════════════════════════════════════════════╝
+ *
+ * Todas as cores e dimensões-chave ficam aqui. Para adaptar o
+ * painel a outra unidade, basta ajustar estas variáveis.
+ *
+ * CORES CPII
+ *   --cpii-navy   → azul-marinho escuro (fundo do header)
+ *   --cpii-gold   → dourado institucional (destaques)
+ *   --cpii-blue   → azul médio CPII (ícones, botões)
+ *
+ * FUNDO / SUPERFÍCIE
+ *   --bg   → cor de fundo da página
+ *   --s1   → superfície branca (cards, cabeçalhos)
+ *   --s2   → superfície cinza-claro (linhas de processo)
+ *   --s3   → superfície hover das linhas
+ *
+ * BORDAS
+ *   --border  → borda normal
+ *   --border2 → borda mais escura (cabeçalho Gantt)
+ *
+ * SEMÂNTICA
+ *   --accent  → dourado (meses, realce)
+ *   --accent2 → azul (links, ativo)
+ *   --danger  → vermelho (atrasado)
+ *   --success → verde (no prazo)
+ *   --warning → âmbar (em planejamento)
+ *   --muted   → cinza-azulado (rótulos secundários)
+ *   --text    → texto principal
+ *   --text2   → texto secundário
+ *
+ * FONTES
+ *   --mono → fonte monoespaçada (números, códigos, KPIs)
+ *   --sans → fonte sem serifa (interface geral)
+ *
+ * DIMENSÕES DO GANTT (ajuste aqui se precisar compactar ou expandir)
+ *   --row-h   → altura de cada linha do Gantt
+ *   --label-w → largura da coluna "Processo / Etapa" (ajuste também
+ *               a constante JS: LABEL_W = 540)
+ */
+:root {
+  --cpii-navy:    #0b1f3d;
+  --cpii-gold:    #c9a22a;
+  --cpii-blue:    #1e4e8c;
+  --bg:           #f4f6fa;
+  --s1:           #ffffff;
+  --s2:           #f0f3f8;
+  --s3:           #e6ebf4;
+  --border:       #d0daea;
+  --border2:      #b8c8de;
+  --accent:       #c9a22a;
+  --accent2:      #1e4e8c;
+  --danger:       #b02035;
+  --success:      #1e7a45;
+  --warning:      #b08a10;
+  --muted:        #6b82a0;
+  --text:         #1a2540;
+  --text2:        #3a506e;
+  --mono:         'Courier New', Courier, monospace;
+  --sans:         'Segoe UI', Arial, sans-serif;
+  --row-h:        56px;   /* altura de cada linha do Gantt — suficiente para N°+nome+pbar */
+  --label-w:      325px;  /* largura do painel fixo de nomes — aumentada p/ acomodar objetos longos */
+}
+/* Reset básico: remove margens e paddings padrão do navegador */
+*{box-sizing:border-box;margin:0;padding:0}
+/* A página inteira rola; o cronograma cresce conforme os processos. */
+html,body{min-height:100%}
+body{display:flex;flex-direction:column;min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--sans);overflow-x:hidden}
+/* Scrollbar fina e discreta nos navegadores WebKit (Chrome, Edge, Safari) */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--s1)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+/* ── Acessibilidade: foco de teclado visível + respeito a movimento reduzido ── */
+:focus-visible{outline:2px solid var(--accent2);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+
+/* ─────────────────────────────────────────────────────────────
+   HEADER — barra superior com logo, título e ações
+   O gradiente de branco para azul CPII simula a identidade visual
+   institucional.
+   ───────────────────────────────────────────────────────────── */
+/* ── HEADER ── */
+.top-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:60px;
+  background:linear-gradient(90deg,#fff 0%,#e8f0fa 30%,#c2d8f0 50%,#7aaad8 70%,#1e4e8c 100%);
+  border-bottom:1px solid rgba(201,162,42,.25);
+  position:relative;z-index:200;
+  box-shadow:0 2px 12px rgba(0,0,0,.4);
+  flex-shrink:0;
+}
+.brand{display:flex;align-items:center;gap:9px}
+.brand-logo{height:40px;width:40px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));flex-shrink:0}
+.brand-divider{width:1px;height:24px;background:linear-gradient(180deg,transparent,rgba(201,162,42,.35),transparent);flex-shrink:0}
+.brand-text{display:flex;flex-direction:column;gap:1px}
+.brand-inst{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cpii-gold);opacity:.85;line-height:1;font-family:var(--mono)}
+.brand-title{font-size:14px;font-weight:600;color:var(--text2);letter-spacing:.3px;line-height:1.2}
+.brand-chip{background:rgba(201,162,42,.15);color:var(--cpii-gold);border:1px solid rgba(201,162,42,.35);font-family:var(--mono);font-size:13px;font-weight:700;padding:4px 10px;border-radius:3px;letter-spacing:1.5px;margin-left:3px}
+.top-right{display:flex;align-items:center;gap:8px}
+.desktop-quick-links{display:flex;align-items:center;gap:7px;white-space:nowrap;padding:0}
+.desktop-quick-links .top-meta{min-height:35px;padding:7px 11px;border:1px solid rgba(255,255,255,.65);border-radius:7px;background:transparent;color:var(--cpii-navy);font-family:var(--sans);font-size:12px;letter-spacing:.1px;cursor:pointer;transition:background .18s ease,box-shadow .18s ease,transform .18s ease}
+.desktop-quick-links .top-meta:hover{background:rgba(255,255,255,.88);box-shadow:0 3px 9px rgba(11,31,61,.14);transform:translateY(-1px)}
+.desktop-quick-links .top-meta:active{transform:translateY(0)}
+.quick-links-divider{height:22px;width:1px;background:rgba(255,255,255,.55);margin:0 4px}
+.desktop-quick-links .atas-shortcut{box-shadow:inset 0 -2px 0 rgba(201,162,42,.72)}
+.desktop-portarias{position:relative}
+.desktop-portarias summary{list-style:none}
+.desktop-portarias summary::-webkit-details-marker{display:none}
+.desktop-portarias summary:focus-visible,.desktop-quick-links a:focus-visible,.desktop-quick-links button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.desktop-portarias-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:195px;padding:6px;background:#fff;border:1px solid rgba(11,29,51,.12);border-radius:9px;box-shadow:0 14px 40px rgba(8,18,33,.28);z-index:310}
+.desktop-portarias-menu a{display:block;padding:10px 12px;border-radius:6px;color:var(--cpii-navy);font:600 13px var(--sans);text-decoration:none}
+.desktop-portarias-menu a:hover,.desktop-portarias-menu a:focus-visible{background:rgba(30,78,140,.08)}
+.desktop-quick-links .acesso-restrito-desktop{background:transparent;border-color:rgba(255,255,255,.75);color:#fff}
+.desktop-quick-links .acesso-restrito-desktop:hover{background:rgba(11,31,61,.66)}
+.links-uteis-wrap{display:none}
+@media (max-width:1200px){
+  .desktop-quick-links{display:none}
+  .links-uteis-wrap{display:block}
+  .links-uteis-menu .ajuda-link-mob{display:flex}
+}
+.top-bar .portal-back{color:#fff;background:transparent;border:1px solid rgba(255,255,255,.55);padding:9px 12px;font:600 13px var(--sans);letter-spacing:0;border-radius:7px}
+.top-meta{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--cpii-navy);background:rgba(201,162,42,.15);border:1px solid rgba(201,162,42,.35);padding:2px 7px;border-radius:3px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;transition:background .2s,border-color .2s}
+.top-meta:hover{background:rgba(201,162,42,.3);border-color:var(--cpii-gold)}
+
+.btn-refresh{background:rgba(255,255,255,.15);border:1px solid rgba(201,162,42,.4);color:var(--cpii-gold);font-family:var(--mono);font-size:12px;font-weight:700;padding:4px 10px;border-radius:10px;cursor:pointer;letter-spacing:1px;transition:all .2s}
+.btn-refresh:hover{background:rgba(201,162,42,.2);border-color:var(--cpii-gold)}
+.btn-refresh:disabled{opacity:.5;cursor:default}
+/* ── Seletor de unidade no cabeçalho (ocupa o lugar do antigo chip DECOF-LIC) ── */
+.unit-selector{background:rgba(201,162,42,.15);color:var(--cpii-navy);border:1px solid rgba(201,162,42,.45);font-family:var(--mono);font-size:13px;font-weight:700;padding:4px 10px;border-radius:3px;letter-spacing:.5px;margin-left:3px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:background .2s,border-color .2s;white-space:nowrap}
+.unit-selector:hover{background:rgba(201,162,42,.3);border-color:var(--cpii-gold)}
+/* ── Menu "Links Úteis" (canto superior direito) ── */
+.links-uteis-wrap{position:relative}
+.links-uteis-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:252px;background:#fff;border:1px solid rgba(11,29,51,.12);border-radius:10px;box-shadow:0 14px 40px rgba(8,18,33,.28);padding:6px;z-index:300;opacity:0;transform:translateY(-10px) scaleY(.95);transform-origin:top right;pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+.links-uteis-menu.open{opacity:1;transform:translateY(0) scaleY(1);pointer-events:auto}
+.links-uteis-menu a,.lu-submenu summary{display:flex;align-items:center;gap:9px;padding:10px 12px;font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--cpii-navy,#0b1d33);text-decoration:none;border-radius:7px;white-space:nowrap}
+.links-uteis-menu a:hover,.lu-submenu summary:hover{background:rgba(30,78,140,.08)}
+.links-uteis-menu a:focus-visible,.lu-submenu summary:focus-visible{outline:2px solid var(--cpii-gold);outline-offset:-2px}
+.lu-submenu summary{cursor:pointer;list-style:none}
+.lu-submenu summary::-webkit-details-marker{display:none}
+.lu-submenu summary::after{content:'▾';margin-left:auto;font-size:12px;transition:transform .18s}
+.lu-submenu[open] summary::after{transform:rotate(180deg)}
+.lu-submenu-links{margin:2px 0 5px 17px;padding-left:9px;border-left:2px solid rgba(201,162,42,.5)}
+.lu-submenu-links a{font-size:13px;padding:9px 10px;white-space:normal}
+.links-uteis-menu .acesso-restrito-link{justify-content:flex-end;border-top:1px solid #e2e8f0;border-radius:0;margin-top:5px;padding-top:13px;font-size:12.5px;color:#475569}
+/* A Ajuda fica no menu compacto de tablet e celular. */
+.ajuda-link-mob{display:none}
+/* ── Modal de ajuda ── */
+.ajuda-backdrop{display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,18,33,.6);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:24px 16px;overflow:auto}
+.ajuda-backdrop.open{display:flex}
+.ajuda-modal{background:#fff;color:#1e293b;max-width:540px;width:100%;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden}
+.ajuda-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--cpii-navy,#0b1d33);color:#fff}
+.ajuda-body{padding:18px 22px;font-size:14px;line-height:1.55}
+.ajuda-body h4{margin:14px 0 4px;font-size:14px;color:var(--cpii-navy,#0b1d33)}
+.ajuda-body p{margin:6px 0}
+.ajuda-body ul{margin:6px 0;padding-left:20px}
+.ajuda-body li{margin:3px 0}
+
+/* Erros aparecem sobre o painel, sem deslocar os cartões e a tabela. */
+.status-banner{display:none;position:fixed;top:76px;right:16px;z-index:1000;align-items:center;max-width:min(480px,calc(100vw - 32px));padding:12px 16px;border:1px solid rgba(176,32,53,.3);border-radius:9px;box-shadow:0 8px 24px rgba(11,31,61,.15);background:#fff7f8;color:var(--danger);font-family:var(--mono);font-size:11px;line-height:1.5}
+.status-banner.error{display:flex}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.last-update.loading::before{animation:none}}
+
+/* ─────────────────────────────────────────────────────────────
+   KPIs — cartões de resumo numérico no topo do painel
+   Grid de 4 colunas com largura máxima de 260px cada, centralizado.
+   Cada cartão (kpi) tem uma borda colorida no topo (::after) que
+   identifica a categoria: azul=total, verde=andamento,
+   vermelho=atrasado, âmbar=planejamento.
+   Os valores (kpi-val) são atualizados pelo JS: updateKPIs().
+   ───────────────────────────────────────────────────────────── */
+/* ── KPIs ── */
+/* 6 colunas: 5 KPIs de contagem + 1 KPI de capacidade (maior) */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,minmax(0,200px)) minmax(0,260px);gap:12px;padding:6px 20px;justify-content:center;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0}
+.kpi{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:5px 12px;position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s,border-color .18s;cursor:default}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.tot::after{background:var(--accent2)}.kpi.and::after{background:var(--success)}
+.kpi.atra::after{background:var(--danger)}.kpi.plan::after{background:#4a6b94}
+.kpi.conc::after{background:#2ecc71}
+/* KPI de capacidade — borda colorida dinâmica via classe JS: cap-disp / cap-lim / cap-max */
+.kpi.cap::after{background:var(--cap-color,#6b82a0)}
+.kpi.cap{border-color:var(--cap-border,var(--border))}
+.kpi.cap .kpi-icon{background:var(--cap-icon-bg,rgba(107,130,160,.1))}
+.kpi.cap .kpi-val{color:var(--cap-color,#6b82a0);font-size:20px}
+/* Níveis de capacidade */
+.kpi.cap.cap-disp{--cap-color:#1e7a45;--cap-border:rgba(30,122,69,.3);--cap-icon-bg:rgba(30,122,69,.1)}
+.kpi.cap.cap-lim {--cap-color:#b08a10;--cap-border:rgba(176,138,16,.3);--cap-icon-bg:rgba(176,138,16,.1)}
+.kpi.cap.cap-max {--cap-color:#b02035;--cap-border:rgba(176,32,53,.3); --cap-icon-bg:rgba(176,32,53,.1)}
+/* Mensagem sutil abaixo do nível */
+.kpi-cap-msg{font-size:9px;color:var(--muted);margin-top:3px;line-height:1.35;font-style:italic}
+/* Barra de progresso interna ao card de capacidade */
+.kpi-cap-bar{height:3px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden}
+.kpi-cap-bar-fill{height:100%;border-radius:2px;background:var(--cap-color,#6b82a0);transition:width .5s ease}
+.kpi-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);margin-bottom:4px}
+.kpi-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.kpi-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:.85}
+.kpi.tot .kpi-icon{background:rgba(30,78,140,.1)}
+.kpi.and .kpi-icon{background:rgba(30,122,69,.1)}
+.kpi.atra .kpi-icon{background:rgba(176,32,53,.1)}
+.kpi.plan .kpi-icon{background:rgba(74,107,148,.12)}
+.kpi.conc .kpi-icon{background:rgba(46,204,113,.1)}
+.kpi-val{font-family:var(--mono);font-size:24px;font-weight:700;line-height:1}
+.kpi.tot .kpi-val{color:var(--accent2)}.kpi.and .kpi-val{color:var(--success)}
+.kpi.atra .kpi-val{color:var(--danger)}.kpi.plan .kpi-val{color:#4a6b94}
+.kpi.conc .kpi-val{color:#2ecc71}
+.kpi:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(30,78,140,.13);border-color:var(--border2)}
+.kpi-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:1px}
+
+/* ─────────────────────────────────────────────────────────────
+   BARRA DE FILTROS — pesquisa por texto e botões de status
+   O campo de busca (f-search) filtra por número e nome do processo.
+   Os botões de status (status-btn) alternam entre: Todos / Andamento
+   / Atrasado / Planejamento — chamam setStatusFilter() no JS.
+   A data de última atualização (.last-update) fica alinhada à direita.
+   ───────────────────────────────────────────────────────────── */
+/* ── FILTROS ── */
+.filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:10px 20px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.9px;color:var(--muted)}
+.fi{background:var(--s2);border:1px solid var(--border);color:var(--text2);font-family:var(--sans);font-size:13px;padding:7px 12px;border-radius:10px;transition:border-color .15s;min-width:260px}
+.fi:focus:not(:focus-visible){outline:none;border-color:var(--accent)}
+.fi::placeholder{color:var(--muted)}
+.status-filter-group{display:flex;gap:5px;align-items:flex-end}
+.status-btn{background:var(--s2);border:1px solid var(--border);color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;padding:7px 13px;border-radius:10px;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.5px}
+.status-btn:hover{border-color:var(--muted);color:var(--text2)}
+.status-btn.active-all {border-color:var(--accent2);color:var(--accent2);background:rgba(77,166,255,.06)}
+.status-btn.active-and {border-color:var(--success);color:var(--success);background:rgba(46,204,113,.06)}
+.status-btn.active-atra{border-color:var(--danger); color:var(--danger); background:rgba(255,77,77,.06)}
+.status-btn.active-plan{border-color:var(--warning);color:var(--warning);background:rgba(240,165,0,.06)}
+.last-update{display:inline-flex;align-items:center;gap:7px;min-height:20px;font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto;align-self:center;white-space:nowrap}
+.last-update.loading{color:var(--accent2)}
+.last-update.loading::before{content:'';width:12px;height:12px;flex:none;border:2px solid rgba(30,78,140,.2);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite}
+.last-update.error{color:var(--danger)}
+/* ── BOTÕES DE ESCALA TEMPORAL (Mês / Trimestre) e SELECT de Ano ── */
+.escala-group{display:flex;gap:5px;align-items:flex-end}
+.escala-btn{background:var(--s2);border:1px solid var(--border);color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;padding:7px 13px;border-radius:10px;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.5px}
+.escala-btn:hover{border-color:var(--muted);color:var(--text2)}
+.escala-btn.active-escala{border-color:var(--accent2);color:var(--accent2);background:rgba(77,166,255,.06)}
+/* SELECT de filtro por ano */
+.ano-select{background:var(--s2);border:1px solid var(--border);color:var(--text2);font-family:var(--sans);font-size:12px;font-weight:600;padding:7px 28px 7px 12px;border-radius:10px;cursor:pointer;transition:border-color .15s;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b82a0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+.ano-select:focus:not(:focus-visible){outline:none;border-color:var(--accent2)}
+/* No modo Trimestre: só colunas-chave (Jan/Abr/Jul/Out) têm borda — as demais somem */
+.gh-mo.trim-vazio{border-right:none;color:transparent}
+
+/* ─────────────────────────────────────────────────────────────
+   BARRA DE LEGENDA — referência visual das cores de modalidade
+   Explica o significado das cores das barras do Gantt:
+   azul-escuro = Pregão Eletrônico, dourado = Contratação Direta.
+   ───────────────────────────────────────────────────────────── */
+/* ── LEGENDA ── */
+.legenda-bar{display:flex;align-items:center;gap:16px;padding:5px 20px;background:var(--s1);border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
+.legenda-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);margin-right:4px}
+.legenda-item{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;padding:3px 9px;border-radius:14px;border:1px solid transparent;user-select:none;transition:background .12s,border-color .12s,opacity .12s}
+.legenda-item:hover{background:var(--s2,rgba(0,0,0,.05))}
+.legenda-item.active{border-color:var(--border);background:var(--s2,rgba(0,0,0,.06));font-weight:700;color:var(--text)}
+/* Quando há um filtro ativo, os itens não selecionados ficam esmaecidos */
+.legenda-bar.filtrando .legenda-item:not(.active){opacity:.45}
+.legenda-hint{font-size:11px;color:var(--muted);margin-left:2px}
+
+/* ─────────────────────────────────────────────────────────────
+   GANTT — estrutura da tabela de cronograma
+   Layout hierárquico:
+     .main          → contêiner que acompanha o crescimento da página
+     .gantt-body    → nomes e barras lado a lado
+     .gr-panel-body → rolagem horizontal dos meses
+
+   CABEÇALHO DE MESES (.gh-wrap)
+     Dividido em anos (.gh-year) → meses (.gh-mo).
+     O mês atual recebe a classe "cur-mo" com destaque dourado.
+
+   LINHAS DO GANTT (.gr)
+     .process-row → linha principal de cada processo (fundo levemente azulado)
+     .etapa-row   → linha de detalhe de etapa (recolhida por padrão;
+                    aparece com classe "visible" ao clicar no botão +/−)
+
+   COLUNA DE RÓTULO (.gl)
+     Largura fixa = --label-w (540px). Contém botão expand (+/−),
+     número do SUAP, nome do processo e barra de progresso.
+
+   COLUNA DE BARRAS (.gt)
+     Flex com células mensais (.mo-cell, 70px cada) criadas pelo JS.
+     As barras (.bar-wrap + .bar) são posicionadas absolutamente.
+
+   BARRAS DO GANTT (.bar)
+     .b-pe / .b-cd / .b-cc → cores de modalidade (barras de processo)
+     .b-andamento / .b-atrasado / .b-ok / .b-planejamento / .b-pendente
+       → status das barras de etapa
+     .b-baseline → faixa cinza fina embaixo da barra real (prazo planejado)
+
+   CÁLCULO DE POSIÇÃO (feito no JS)
+     barX(moIdx, rangeStart) = (moIdx - rangeStart) × 70 + 4   (px do left)
+     barW(ini, fim)          = (fim - ini + 1) × 70 − 8        (px da largura)
+     O +4 / −8 cria um respiro de 4px em cada extremidade da célula.
+
+   LINHA DE HOJE (.today-line)
+     Linha vertical dourada semitransparente sobre o mês corrente.
+   ───────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   GANTT — LAYOUT SPLIT-PANEL
+   Coluna esquerda (nomes) fixa + painel direito (barras) com scroll.
+   Isso evita o bug do sticky horizontal e mantém os nomes visíveis.
+   ══════════════════════════════════════════════════════════════ */
+.main{display:flex;flex-direction:column;flex:1;padding:12px 20px 8px 20px;background:var(--bg)}
+.gantt-card{display:flex;flex-direction:column;background:var(--s1);border:1px solid var(--border2);border-radius:14px;box-shadow:0 4px 18px rgba(30,78,140,.10);overflow:hidden}
+
+/* Corpo do Gantt: linha horizontal com painel-E (nomes) + painel-D (barras) */
+.gantt-body{display:flex;border-radius:0 0 14px 14px}
+
+/* PAINEL ESQUERDO — coluna de nomes, largura fixa, sem scroll horizontal */
+.gl-panel{width:var(--label-w);min-width:var(--label-w);flex-shrink:0;display:flex;flex-direction:column;border-right:2px solid var(--border2);background:var(--s2);z-index:10;transition:width .2s ease,min-width .2s ease}
+.gl-panel-hdr{height:var(--hdr-h);display:flex;align-items:center;padding:0 20px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);background:var(--s2);border-bottom:2px solid var(--border2);flex-shrink:0}
+.gl-panel-body::-webkit-scrollbar{display:none}
+.gl-panel-body{
+  overflow:visible;
+  background-color:var(--s2);
+  background-image:repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent calc(var(--row-h) - 1px),
+    var(--border) calc(var(--row-h) - 1px),
+    var(--border) var(--row-h)
+  );
+  background-attachment:local;
+}
+
+/* PAINEL DIREITO — área de barras com scroll horizontal livre */
+.gr-panel{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.gr-panel-hdr{height:var(--hdr-h);overflow:hidden;flex-shrink:0;background:var(--s2);border-bottom:2px solid var(--border2);border-radius:0 14px 0 0}
+/* gr-panel-body: scroll container.
+   Duas camadas de background:
+   1) linhas horizontais — cobrem 100% da largura sempre (grade de linhas de processo)
+   2) linhas verticais tracejadas — via CSS vars setadas pelo JS: cobertas até barsW */
+.gr-panel-body{
+  flex:1;overflow-x:auto;overflow-y:hidden;position:relative;
+  background-color:var(--s2);
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent calc(var(--row-h) - 1px),
+      var(--border) calc(var(--row-h) - 1px),
+      var(--border) var(--row-h)
+    );
+}
+
+/* --hdr-h: altura do cabeçalho de meses/anos */
+:root{--hdr-h:54px}
+
+/* Cabeçalho de meses */
+.gh-wrap{display:flex;height:100%}
+.gh-months{display:flex;flex:1}
+.gh-year{display:flex;flex-direction:column;border-right:1px solid var(--border2)}
+.gh-year:last-child{border-right:none}
+.gh-year-lbl{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--cpii-navy);padding:4px 10px;background:#e6ebf4;border-bottom:1px solid var(--border)}
+.gh-mos{display:flex}
+.gh-mo{width:70px;min-width:70px;text-align:center;padding:5px 0;font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted);border-right:1px dashed rgba(176,200,222,.6);position:relative}
+.gh-mo.cur-mo{color:var(--accent);background:rgba(240,165,0,.05)}
+.gh-mo.cur-mo::after{content:'';position:absolute;bottom:0;left:50%;width:2px;height:2px;background:var(--accent);border-radius:50%;margin-left:-1px}
+
+/* Linhas — agora em tabelas separadas (esquerda/direita) */
+/* Linha de nome (dentro de .gl-panel-body) */
+.gl-row{display:flex;align-items:center;border-bottom:1px solid var(--border);height:var(--row-h);min-height:var(--row-h);max-height:var(--row-h);width:100%;padding:0 10px 0 20px;gap:7px;cursor:default;overflow:hidden;box-sizing:border-box}
+.gl-row.process-row{background:var(--s2)}.gl-row.process-row:hover{background:var(--s3)}
+.gl-row.etapa-row{background:#e8eef6;display:none}.gl-row.etapa-row.visible{display:flex}
+.gl-row.etapa-row:hover{background:#dde4f0}
+
+/* Linha de barra (dentro de gantt-bars) — min-width:100% garante que border-bottom
+   se estende até a borda direita do gr-panel-body, sem deixar gap */
+.gr-row{display:flex;align-items:center;border-bottom:1px solid var(--border);height:var(--row-h);min-height:var(--row-h);max-height:var(--row-h);min-width:100%;position:relative;box-sizing:border-box}
+.gr-row.process-row{background:var(--s2)}.gr-row.process-row:hover{background:var(--s3)}
+.gr-row.etapa-row{background:#e8eef6;display:none}.gr-row.etapa-row.visible{display:flex}
+.gr-row.etapa-row:hover{background:#dde4f0}
+
+/* Tabelas internas (sem overflow próprio — o pai controla) */
+.gantt-names{display:flex;flex-direction:column}
+/* gantt-bars: as gr-row cobrem o background do pai com cor opaca,
+   revelando a grade horizontal do gr-panel-body apenas abaixo das linhas reais.
+   As linhas verticais tracejadas dos meses ficam nas .mo-cell via border-right. */
+.gantt-bars{display:flex;flex-direction:column}
+
+/* Células de nome */
+.expand-btn{width:18px;height:18px;min-width:18px;background:var(--s3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);transition:all .15s;user-select:none;flex-shrink:0;line-height:1}
+.expand-btn:hover{border-color:var(--accent);color:var(--accent)}
+.expand-btn.open{border-color:var(--accent2);color:var(--accent2);background:rgba(77,166,255,.08)}
+.proc-num{font-family:var(--mono);font-size:13px;color:var(--cpii-navy);font-weight:700;white-space:nowrap;padding-top:4px}
+.proc-name{font-size:15px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.etapa-indent{width:24px;min-width:24px;flex-shrink:0}
+.etapa-dot{width:7px;height:7px;min-width:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.etapa-name{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.name-info{display:flex;flex-direction:column;gap:2px;overflow:hidden;flex:1;min-width:0}
+
+/* Células de mês (dentro de .gr-row) */
+.gt{display:flex;align-items:stretch;position:relative;height:100%}
+.mo-cell{height:100%;flex-shrink:0;position:relative;border-right:1px dashed rgba(176,200,222,.6)}
+.mo-cell:last-child{border-right:none}
+.mo-cell.cur-mo{background:rgba(240,165,0,.025)}
+.mo-cell.trim-vazio{border-right:none}
+
+.bar-wrap{position:absolute;top:50%;transform:translateY(-50%);display:flex;align-items:center;pointer-events:all;z-index:2}
+.bar{height:20px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;padding:0 8px;cursor:pointer;transition:filter .15s,transform .1s}
+.bar:hover{filter:brightness(1.2);transform:scaleY(1.05)}
+.bar.b-andamento  {background:rgba(77,166,255,.22); color:var(--accent2);border:1px solid rgba(77,166,255,.35)}
+.bar.b-atrasado   {background:rgba(255,77,77,.22);  color:var(--danger); border:1px solid rgba(255,77,77,.35)}
+.bar.b-ok         {background:rgba(46,204,113,.18); color:var(--success);border:1px solid rgba(46,204,113,.3)}
+.bar.b-planejamento{background:rgba(240,165,0,.18); color:var(--warning);border:1px solid rgba(240,165,0,.3)}
+.bar.b-pendente   {background:rgba(107,122,153,.1); color:var(--muted);  border:1px dashed rgba(107,122,153,.25)}
+/* Aguardando requisitante — laranja (ação esperada de terceiro) */
+.bar.b-aguardando {background:rgba(230,126,34,.2);  color:#c0622a;       border:1px solid rgba(230,126,34,.4)}
+/* Paralisado — roxo acinzentado (evento extraordinário, sem prazo) */
+.bar.b-paralisado {background:rgba(142,68,173,.15); color:#7d3c98;       border:1px dashed rgba(142,68,173,.35)}
+.bar.b-pe{background:rgba(30,78,140,.35); border:1px solid rgba(30,78,140,.7)}
+.bar.b-cd{background:rgba(201,162,42,.22);border:1px solid rgba(201,162,42,.45)}
+.bar.b-cc{background:rgba(45,80,22,.25);  border:1px solid rgba(45,80,22,.5)}
+.bar.b-baseline{height:6px;border-radius:2px;background:rgba(107,122,153,.25);border:none;cursor:default}
+.bar.b-baseline:hover{filter:none;transform:none}
+.etapa-row{display:none}.etapa-row.visible{display:flex}
+
+/* Linha "Hoje" — fixed ao gantt-outer, não depende de LABEL_W */
+.today-line{position:fixed;width:1px;background:rgba(240,165,0,.45);z-index:50;pointer-events:none;will-change:left,top,height}
+
+.proc-pbar-wrap{display:flex;align-items:center;gap:6px;margin-top:3px}
+/* Trilho da barra de % com brilho sutil nas bordas (glow externo + leve
+   realce interno). Não altera o preenchimento — só o contorno do trilho,
+   para dar destaque discreto sem competir visualmente com as barras do Gantt. */
+.proc-pbar{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden;max-width:140px;
+  box-shadow:0 0 3px rgba(11,47,99,.28), inset 0 0 0 1px rgba(11,47,99,.10)}
+.proc-pbar-fill{height:100%;border-radius:2px;transition:width .3s}
+/* Cores da barra de progresso — padronizadas em azul CPII para todos os
+   estados normais (atrasado, andamento, planejamento). O semáforo de status
+   já é comunicado pelo ícone de alerta (.proc-alert) e pelas cores das
+   barras do Gantt. Apenas processos 100% concluídos ganham verde.
+   Lógica definida no JS: pc2 = p.execucao === 100 ? 'done' : 'ok' */
+.proc-pbar-fill.ok{background:var(--accent2)}
+.proc-pbar-fill.done{background:var(--success)}
+.proc-pbar-pct{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* Ícone de alerta à direita da linha do processo (só para processos atrasados).
+   Usa o mesmo círculo-com-exclamação da KPI "Atrasados" (stroke #b02035).
+   - display:flex para centralizar verticalmente
+   - flex-shrink:0 para não encolher junto com o texto truncado do objeto
+   - tamanho proporcional à altura da linha (~24px ≈ 43% da row-h 56px)
+   - pointer-events:none porque o click/hover ficam na barra do Gantt à direita
+   - title atribuído via JS para leitor de tela / tooltip nativo curto
+*/
+.proc-alert{width:24px;height:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:.9;pointer-events:none;margin-left:6px}
+.proc-alert svg{width:100%;height:100%}
+
+/* ─────────────────────────────────────────────────────────────
+   TOOLTIP — balão flutuante de detalhes ao passar o mouse na barra
+   Usa position:fixed e z-index:9999 para aparecer sempre por cima.
+   O JS calcula a posição em positionTT() evitando saída da tela.
+   Estado "pinned": o tooltip fica fixo ao clicar na barra (útil
+   para copiar o link do SUAP). A classe .pinned mostra o indicador
+   "fixado — clique para fechar" no cabeçalho.
+   ───────────────────────────────────────────────────────────── */
+/* ── TOOLTIP ── */
+.tt{position:fixed;background:var(--s2);border:1px solid var(--border2);border-radius:8px;padding:10px 13px;min-width:220px;max-width:300px;z-index:9999;pointer-events:none;opacity:0;transition:opacity .1s;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.tt.show{opacity:1}
+.tt.pinned{border-color:var(--accent2);pointer-events:all}
+.tt.pinned .tt-head::after{content:' · fixado — clique para fechar';font-size:12px;color:var(--accent2);font-weight:400}
+.tt-head{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700;padding-bottom:9px;margin-bottom:9px;border-bottom:1px solid var(--border)}
+.tt-row{display:flex;justify-content:space-between;gap:12px;margin-bottom:5px;font-size:13px}
+.tt-row:last-child{margin-bottom:0}
+.tt-k{color:var(--muted);white-space:nowrap;font-size:13px}
+.tt-v{color:var(--text);font-weight:600;text-align:right;font-size:13px}
+.tt-v.ok{color:var(--success)}.tt-v.warn{color:var(--warning)}.tt-v.bad{color:var(--danger)}
+.tt-alert{margin-top:9px;padding:8px 10px;background:rgba(255,77,77,.07);border:1px solid rgba(255,77,77,.2);border-radius:5px;font-size:13px;color:var(--danger);line-height:1.45}
+.tt-alert b{display:block;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+/* Caixa laranja — processo aguardando ação do setor requisitante */
+.tt-warn{margin-top:9px;padding:8px 10px;background:rgba(230,126,34,.07);border:1px solid rgba(230,126,34,.3);border-radius:5px;font-size:13px;color:#c0622a;line-height:1.45}
+.tt-warn b{display:block;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+/* Caixa roxa — processo paralisado por evento extraordinário */
+.tt-paral{margin-top:9px;padding:8px 10px;background:rgba(142,68,173,.07);border:1px dashed rgba(142,68,173,.35);border-radius:5px;font-size:13px;color:#7d3c98;line-height:1.45}
+.tt-paral b{display:block;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+/* Bloco institucional "tudo concluído" — equivalente positivo do .tt-alert.
+   Usado em showProcTT quando o processo tem execucao===100 / status==='ok'.
+   Reaproveita o check-circle da KPI "Concluídos" (stroke #2ecc71). */
+.tt-success{margin-top:9px;padding:8px 10px;background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.28);border-radius:5px;font-size:13px;color:var(--success);line-height:1.45;display:flex;gap:8px;align-items:flex-start}
+.tt-success svg{width:18px;height:18px;flex-shrink:0;margin-top:1px}
+.tt-success b{display:block;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.tt-hint{margin-top:9px;padding:7px 10px;background:rgba(77,166,255,.06);border:1px solid rgba(77,166,255,.15);border-radius:5px;font-size:12px;color:var(--accent2);line-height:1.4}
+.tt-link{margin-top:9px;font-family:var(--mono);font-size:13px;color:var(--accent2);word-break:break-all;text-decoration:underline}
+.tt-sep{height:1px;background:var(--border);margin:8px 0}
+.pbar-wrap{display:flex;align-items:center;gap:8px}
+.pbar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.pbar-fill{height:100%;border-radius:2px;background:var(--accent2)}
+.pbar-fill.plan{background:var(--muted)}.pbar-fill.bad{background:var(--danger)}
+.pbar-pct{font-family:var(--mono);font-size:11px;font-weight:600;min-width:30px;text-align:right}
+/* ─────────────────────────────────────────────────────────────
+   FOOTER — rodapé institucional com nome, endereço e ramais
+   Fica após o cronograma no fluxo natural da página.
+   Altura fixa de 54px (min/max/height iguais) garante que ele
+   não mude de tamanho ao filtrar processos.
+   Para atualizar os ramais, edite os <span class="footer-ramal">
+   no HTML abaixo.
+   ───────────────────────────────────────────────────────────── */
+/* ── FOOTER ── */
+.footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;
+  height:54px;min-height:54px;max-height:54px;
+  width:100%;
+  flex-shrink:0;
+  background:linear-gradient(90deg,#1e4e8c 0%,#1a3f72 40%,#142f58 70%,#0b1f3d 100%);
+  border-top:2px solid rgba(201,162,42,.3);
+  box-shadow:0 -2px 12px rgba(0,0,0,.25);
+}
+.footer-brand{display:flex;align-items:center;gap:10px}
+.footer-logo{height:36px;width:36px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));flex-shrink:0;opacity:.9}
+.footer-inst{display:flex;flex-direction:column;gap:2px}
+.footer-name{font-size:13px;font-weight:700;color:#fff;letter-spacing:.3px;line-height:1.2}
+.footer-addr{font-size:11px;color:rgba(255,255,255,.6);line-height:1.4}
+.footer-divider{width:1px;height:32px;background:linear-gradient(180deg,transparent,rgba(201,162,42,.4),transparent);flex-shrink:0;margin:0 20px}
+.footer-contact{display:flex;align-items:center;gap:28px}
+.footer-ramais{display:flex;flex-direction:column;gap:3px}
+.footer-ramais-lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--cpii-gold);opacity:.8}
+.footer-ramais-nums{display:flex;gap:14px}
+.footer-ramal{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.75);display:flex;align-items:center;gap:5px}
+.footer-ramal::before{content:'📞';font-size:11px}
+.footer-email{display:flex;flex-direction:column;gap:3px}
+.footer-email-lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--cpii-gold);opacity:.8}
+.footer-email-val{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.75);display:flex;align-items:center;gap:5px}
+.footer-right{font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.35);letter-spacing:.8px;text-align:right;line-height:1.6}
+
+/* ─────────────────────────────────────────────────────────────
+   SKELETON LOADING — animação de "conteúdo carregando"
+   Enquanto getDados() busca os dados na planilha, o JS chama
+   showSkeleton() que preenche o Gantt com blocos cinza animados.
+   O efeito shimmer (gradiente deslizando) é criado pela animação
+   @keyframes abaixo. Quando os dados chegam, render() substitui
+   o conteúdo do gantt-table, eliminando os esqueletos.
+   ───────────────────────────────────────────────────────────── */
+/* ── SKELETON LOADING ── */
+@keyframes shimmer {
+  0%   { background-position: -800px 0 }
+  100% { background-position:  800px 0 }
+}
+.sk {
+  background: linear-gradient(90deg, #e4eaf4 25%, #cdd7ea 50%, #e4eaf4 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 4px;
+}
+.sk-row {
+  display: flex; align-items: center;
+  border-bottom: 1px solid var(--border);
+  min-height: 48px; padding: 0 10px 0 20px; gap: 10px;
+}
+.sk-expand { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; }
+.sk-info   { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; max-width: 520px; }
+.sk-num    { height: 11px; width: 45%; border-radius: 3px; }
+.sk-name   { height: 15px; border-radius: 3px; }
+.sk-bar-cell { flex: 1; padding: 0 8px; }
+.sk-bar    { height: 20px; border-radius: 4px; }
+
+/* ══════════════════════════════════════════════════════════════
+   MOBILE — cards expansíveis (visível em telas ≤ 768px)
+   O Gantt split-panel é ocultado; a lista de cards substitui.
+   ══════════════════════════════════════════════════════════════ */
+#mobile-list { display: none }
+.mob-modal-filter { display: none !important } /* oculto no desktop; media query ativa no mobile */
+
+/* ── Cards de processo ── */
+.mob-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(30,78,140,.07);
+}
+.mob-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.mob-card-header:active { background: var(--s2); }
+.mob-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+.mob-badge.b-andamento  { background: rgba(77,166,255,.15); color: var(--accent2); border: 1px solid rgba(77,166,255,.3); }
+.mob-badge.b-atrasado   { background: rgba(176,32,53,.12);  color: var(--danger);  border: 1px solid rgba(176,32,53,.3); }
+.mob-badge.b-ok         { background: rgba(30,122,69,.12);  color: var(--success); border: 1px solid rgba(30,122,69,.3); }
+.mob-badge.b-planejamento{background: rgba(240,165,0,.12);  color: var(--warning); border: 1px solid rgba(240,165,0,.3); }
+.mob-badge.b-aguardando { background: rgba(230,126,34,.15); color: #c0622a;        border: 1px solid rgba(230,126,34,.3); }
+.mob-badge.b-paralisado { background: rgba(142,68,173,.12); color: #7d3c98;        border: 1px solid rgba(142,68,173,.3); }
+.mob-info { flex: 1; min-width: 0; }
+.mob-num  { font-family: var(--mono); font-size: 11px; color: var(--cpii-navy); font-weight: 700; }
+.mob-nome { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mob-prog-wrap { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.mob-pbar { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.mob-pbar-fill { height: 100%; border-radius: 2px; background: var(--accent2); transition: width .3s; }
+.mob-pbar-fill.done { background: var(--success); }
+.mob-pct  { font-family: var(--mono); font-size: 10px; color: var(--muted); white-space: nowrap; }
+.mob-chevron { flex-shrink: 0; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--muted); transition: transform .2s; }
+.mob-chevron.open { transform: rotate(180deg); }
+/* ── Etapas expansíveis ── */
+.mob-etapas { display: none; border-top: 1px solid var(--border); }
+.mob-etapas.open { display: block; }
+.mob-etapa {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.mob-etapa:last-child { border-bottom: none; }
+/* Ícone de etapa: ponto colorido (padrão) ou ✓ para concluídas */
+.mob-etapa-dot {
+  flex-shrink: 0;
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 1px;
+  font-size: 14px;
+}
+.mob-etapa-dot.c-ok    { color: var(--success); }
+.mob-etapa-dot.c-and   { color: var(--accent2); }
+.mob-etapa-dot.c-atra  { color: var(--danger); }
+.mob-etapa-dot.c-plan  { color: var(--border2); }
+.mob-etapa-dot.c-agu   { color: #e67e22; }
+.mob-etapa-dot.c-par   { color: #7d3c98; }
+.mob-etapa-dot.c-na    { color: var(--border2); }
+.mob-etapa-body { flex: 1; min-width: 0; }
+.mob-etapa-nome { font-weight: 600; color: var(--text2); }
+.mob-etapa-status { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.mob-etapa-motivo { font-size: 11px; color: var(--danger); margin-top: 2px; font-style: italic; }
+
+/* ── Menu flutuante de links (mobile pequeno) ── */
+.mob-links-btn {
+  display: none; /* visível apenas no mobile via media query */
+  background: rgba(201,162,42,.15);
+  border: 1px solid rgba(201,162,42,.4);
+  color: var(--cpii-gold);
+  font-size: 16px;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.mob-links-menu {
+  display: none;
+  position: fixed;
+  top: 56px; right: 10px;
+  background: var(--s1);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  z-index: 500;
+  padding: 6px 0;
+  min-width: 210px;
+}
+.mob-links-menu.open { display: block; }
+.mob-links-menu a {
+  display: block;
+  padding: 11px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+}
+.mob-links-menu a:last-child { border-bottom: none; }
+.mob-links-menu a:active { background: var(--s2); }
+
+/* Filtro de modalidade (mobile) */
+.mob-modal-filter { display: flex; gap: 8px; padding: 8px 12px; background: var(--s1); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.mob-modal-btn {
+  flex: 1; padding: 8px 4px; border-radius: 10px; font-size: 12px; font-weight: 700;
+  border: 1px solid var(--border); background: var(--s2); color: var(--muted);
+  cursor: pointer; text-align: center; letter-spacing: .3px; min-height: 44px;
+  transition: all .15s; text-transform: uppercase;
+}
+.mob-modal-btn.active-pe  { background: rgba(30,78,140,.12); color: var(--cpii-blue); border-color: var(--cpii-blue); }
+.mob-modal-btn.active-cd  { background: rgba(201,162,42,.12); color: var(--cpii-gold); border-color: var(--cpii-gold); }
+.mob-modal-btn.active-all { background: rgba(30,78,140,.06); color: var(--accent2); border-color: var(--accent2); }
+
+@media (max-width: 768px) {
+  /* body: permitir scroll vertical na página toda */
+  body { overflow: auto; }
+  /* Ocultar Gantt desktop, mostrar lista mobile */
+  .main { display: none !important; }
+  #mobile-list { display: block; padding: 10px 12px 40px; }
+
+  /* KPI "Em Andamento" → só "Andamento" no mobile */
+  .kpi-lbl-prefix { display: none; }
+  /* Ocultar elementos que só fazem sentido com o Gantt */
+  .fg:has(.escala-group) { display: none; }  /* bloco Escala */
+  .legenda-bar { display: none; }             /* legenda de cores */
+  .mob-modal-filter { display: flex !important; } /* filtro de modalidade mobile */
+
+  /* Header compacto */
+  .top-bar { height: auto; min-height: 50px; padding: 8px 12px; flex-wrap: nowrap; gap: 8px; }
+  .brand-chip { display: none; }
+  /* marca em grid: logo+divisor à esquerda; "Painel de Contratações" e o
+     seletor de unidade empilhados na mesma coluna (seletor alinhado ao título,
+     com um leve respiro acima). No mobile a linha "COLÉGIO PEDRO II" é ocultada
+     para o cabeçalho ficar mais curto. */
+  .brand {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    grid-template-areas:
+      "logo divider title"
+      "logo divider unit";
+    align-items: center;
+    column-gap: 9px;
+    row-gap: 3px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .brand-logo    { grid-area: logo; }
+  .brand-divider { grid-area: divider; }
+  .brand-text    { grid-area: title; min-width: 0; }
+  .brand-inst    { display: none; }
+  .brand-title   { white-space: nowrap; }
+  /* desloca o seletor à esquerda pela borda+padding (1+8px) para que o
+     conteúdo dele alinhe com o texto do título, e não a borda da caixa */
+  .unit-selector { grid-area: unit; justify-self: start; margin-left: -9px; }
+  /* o bloco de Links Úteis nunca encolhe nem some no canto direito */
+  .top-right { flex-shrink: 0; }
+  /* no mobile o botão de Links Úteis mostra só o ícone 🔗 */
+  #links-uteis-btn .lu-label { display: none; }
+  #links-uteis-btn {
+    font-size: 16px; line-height: 1; padding: 0;
+    width: 36px; height: 36px; justify-content: center;
+    border-radius: 50%;
+    background: rgba(201,162,42,.35);
+    border-color: rgba(201,162,42,.55);
+  }
+  #links-uteis-btn:hover { background: rgba(201,162,42,.5); }
+  /* o seletor de unidade (#btn-troca-unidade) agora fica na marca e deve aparecer no mobile */
+  .unit-selector { font-size: 10px; padding: 2px 8px; letter-spacing: .3px; }
+  /* no mobile a Ajuda volta para dentro do menu Links Úteis */
+  .ajuda-link-mob { display: flex; }
+  .brand-title { font-size: 12px; }
+  .brand-inst  { font-size: 10px; }
+  .brand-logo  { height: 32px; width: 32px; }
+  .top-meta    { font-size: 11px; padding: 2px 6px; }
+  .btn-refresh { font-size: 11px; padding: 4px 8px; }
+
+  /* KPIs em grade de 6 colunas para linhas equilibradas e sem vãos:
+     linha 1 = 3 cards (2 colunas cada), linha 2 = Fila + Concluídos (3 colunas
+     cada, mais largos), linha 3 = Capacidade ocupando a largura total. */
+  .kpi-strip { grid-template-columns: repeat(6, 1fr); padding: 8px 12px; gap: 8px; }
+  .kpi { padding: 6px 10px; grid-column: span 2; }
+  /* Linhas 2 e 3 um pouco mais estreitas que a linha 1, com leve respiro nas
+     laterais; o recuo igual mantém Fila/Concluídos alinhados com a Capacidade. */
+  .kpi.plan { grid-column: span 3; margin-left: 16px; }
+  .kpi.conc { grid-column: span 3; margin-right: 16px; }
+  .kpi.cap  { grid-column: 1 / -1; margin-left: 16px; margin-right: 16px; }
+  .kpi-val { font-size: 20px; }
+  .kpi-lbl { font-size: 10px; }
+  .kpi-sub { display: none; }
+  .kpi-icon { width: 22px; height: 22px; }
+
+  /* Filtros: empilhados, sem bloco de escala */
+  .filter-bar { flex-direction: column; align-items: stretch; padding: 8px 12px; gap: 8px; }
+  .fi { min-width: unset; width: 100%; }
+  .status-filter-group { flex-wrap: wrap; }
+  .status-btn { flex: 1; text-align: center; padding: 8px 4px; font-size: 11px; min-width: 60px; min-height: 44px; }
+  .ano-select { width: 100%; padding: 8px 28px 8px 12px; min-height: 44px; }
+  .last-update { margin-left: 0; font-size: 11px; }
+
+  .status-banner { top:64px; font-size:10px; }
+
+  /* Footer: oculto no mobile */
+  .footer { display: none; }
+}
+
+/* Telas muito pequenas (≤ 420px — Galaxy S8+, etc.) */
+@media (max-width: 420px) {
+  /* Links do header → ocultar individualmente, mostrar botão flutuante */
+  .top-meta-link { display: none; }
+  .mob-links-btn { display: flex; }
+
+  /* Header: marca + botões de ação apenas */
+  .top-bar { padding: 6px 10px; }
+  .brand-logo { height: 28px; width: 28px; }
+  .brand-title { font-size: 11px; }
+  .brand-inst  { font-size: 9px; }
+
+  /* KPIs ainda menores */
+  .kpi-strip { gap: 5px; padding: 6px 8px; }
+  .kpi { padding: 5px 6px; }
+  .kpi-val { font-size: 17px; }
+  .kpi-lbl { font-size: 9px; letter-spacing: .4px; }
+  .kpi-icon { width: 18px; height: 18px; }
+
+  /* Filtros mais compactos */
+  .filter-bar { padding: 6px 8px; gap: 6px; }
+  .status-btn { font-size: 10px; padding: 7px 2px; }
+
+  /* Cards mobile */
+  #mobile-list { padding: 8px 8px 40px; }
+  .mob-card-header { padding: 10px 10px; gap: 8px; }
+  .mob-nome { font-size: 13px; }
+  .mob-num  { font-size: 10px; }
+  .mob-badge { font-size: 9px; padding: 2px 6px; }
+  .mob-etapa { padding: 8px 10px; font-size: 12px; }
+}
+</style>
+<script src="portal.js?v=20261009" defer></script>
+<script src="config.js"></script>
+<!-- Firebase (compat) — leitura direta do Firestore. A apiKey em config.js NAO e segredo;
+     a protecao e feita pelas regras do Firestore (leitura publica, escrita bloqueada). -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="painel-firestore.js"></script>
+<!-- Fase 1 do PLANO_SEGURANCA.md — camada de acesso a dados (gateway de leitura). -->
+<script src="data-gateway.js"></script>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="top-bar">
+  <div class="brand">
+    <img class="brand-logo" src="assets/brasao-cpii.png" alt="Brasão Colégio Pedro II" style="width: 69px; height: 50px; object-fit: cover">
+    <div class="brand-divider"></div>
+    <div class="brand-text">
+      <span class="brand-inst">Colégio Pedro II</span>
+      <span class="brand-title">Painel de Contratações</span>
+    </div>
+    <button class="unit-selector" id="btn-troca-unidade" title="Trocar a unidade exibida">🏛️ Reitoria ▾</button>
+  </div>
+  <div class="top-right">
+    <a class="top-meta portal-back" href="index.html" data-unidade>← Página inicial</a>
+  </div>
+</div>
+<!-- Menu flutuante de links para mobile pequeno -->
+<!-- (menu mobile antigo removido — o menu "Links Úteis" do cabeçalho funciona em todas as larguras) -->
+
+<!-- Aviso flutuante para erros; o carregamento aparece junto de "Atualizado". -->
+<div class="status-banner" id="status-banner" role="alert"><span id="status-msg"></span></div>
+
+<!--
+  KPIs — CARTÕES DE RESUMO
+  Quatro cartões: Total / Em Andamento / Atrasados / Em Planejamento.
+  Os valores (id="kv-tot", "kv-and", "kv-atra", "kv-plan") são
+  preenchidos em tempo real pelo JS: updateKPIs(filtered).
+  Os ícones SVG inline dispensam dependências externas de ícones.
+-->
+<!-- KPIs -->
+<div class="kpi-strip">
+  <div class="kpi tot"><div class="kpi-header"><div class="kpi-lbl" style="font-size: 11px">Total de Processos</div><svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="#1e4e8c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="4" x2="8" y2="9"/><line x1="16" y1="4" x2="16" y2="9"/></svg></div><div class="kpi-val" id="kv-tot">—</div><div class="kpi-sub" style="font-size: 12px">exercício ativo</div></div>
+  <div class="kpi and"><div class="kpi-header"><div class="kpi-lbl" style="font-size: 11px"><span class="kpi-lbl-prefix">Em </span>Andamento</div><svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="#1e7a45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="kpi-val" id="kv-and">—</div><div class="kpi-sub" style="font-size: 12px">fase interna / externa</div></div>
+  <div class="kpi atra"><div class="kpi-header"><div class="kpi-lbl" style="font-size: 11px">Atrasados</div><svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="#b02035" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="kpi-val" id="kv-atra">—</div><div class="kpi-sub" style="font-size: 12px">≥ 1 etapa fora do prazo</div></div>
+  <div class="kpi plan"><div class="kpi-header"><div class="kpi-lbl" style="font-size: 11px">Fila de Prioridade</div><svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="#4a6b94" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="kpi-val" id="kv-plan">—</div><div class="kpi-sub" style="font-size: 12px">processos em análise</div></div>
+  <div class="kpi conc"><div class="kpi-header"><div class="kpi-lbl" style="font-size: 11px">Concluídos</div><svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="kpi-val" id="kv-conc">—</div><div class="kpi-sub" style="font-size: 12px">100% das etapas finalizadas</div></div>
+  <!-- KPI Capacidade do Setor — valor e mensagem atualizados por updateCapacidade() -->
+  <div class="kpi cap" id="kpi-cap">
+    <div class="kpi-header">
+      <div class="kpi-lbl" style="font-size:11px">Capacidade do Setor</div>
+      <!-- ícone: medidor / gauge simplificado -->
+      <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" opacity=".3"/>
+        <path d="M12 4a8 8 0 0 1 5.66 13.66"/>
+        <polyline points="12 12 15 9"/>
+        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+    <div class="kpi-val" id="kv-cap">—</div>
+    <div class="kpi-cap-bar"><div class="kpi-cap-bar-fill" id="kv-cap-bar" style="width:0%"></div></div>
+    <div class="kpi-cap-msg" id="kv-cap-msg">carregando…</div>
+  </div>
+</div>
+
+<!--
+  FILTROS
+  Campo de busca (oninput="applyFilters()") → filtra por número e nome.
+  Botões de status chamam setStatusFilter(this, 'valor').
+  applyFilters() aplica ambos os filtros, ordena (atrasados primeiro)
+  e chama render(filtered) para redesenhar o Gantt.
+-->
+<!-- FILTROS -->
+<div class="filter-bar">
+  <div class="fg">
+    <div class="fl">Pesquisar</div>
+    <input class="fi" id="f-search" type="text" placeholder="Número ou objeto do processo…">
+  </div>
+  <div class="fg">
+    <div class="fl">Status</div>
+    <div class="status-filter-group">
+      <button class="status-btn active-all" data-s="">Todos</button>
+      <button class="status-btn" data-s="andamento">Andamento</button>
+      <button class="status-btn" data-s="atrasado">Atrasado</button>
+      <button class="status-btn" data-s="planejamento">Em fila</button>
+    </div>
+  </div>
+  <div class="fg">
+    <div class="fl">Escala</div>
+    <div class="escala-group">
+      <button class="escala-btn active-escala" data-e="mes">Mês</button>
+      <button class="escala-btn"               data-e="trimestre">Trimestre</button>
+    </div>
+  </div>
+  <div class="fg">
+    <div class="fl">Ano</div>
+    <select class="ano-select" id="ano-select">
+      <option value="">Todos</option>
+    </select>
+  </div>
+  <span class="last-update" id="last-update" role="status" aria-live="polite">Atualizado: —</span>
+</div>
+
+<!--
+  LEGENDA DE MODALIDADES
+  Explica as cores das barras principais (processo):
+    Azul-escuro → Pregão Eletrônico (PE) — prazo externo ≈ 90 dias
+    Dourado     → Contratação Direta (CD) — prazo externo ≈ 30 dias
+  As cores de status das etapas (verde/vermelho/âmbar) não aparecem
+  aqui pois já são autoexplicativas pelo próprio status textual.
+-->
+<!-- LEGENDA -->
+<div class="legenda-bar" id="legenda-bar">
+  <span class="legenda-title">Filtro / Legenda:</span>
+  <div class="legenda-item" data-modal="PE" role="button" tabindex="0" title="Clique para filtrar apenas Pregão Eletrônico"><div style="width:14px;height:14px;border-radius:2px;background:#1e4e8c"></div>Pregão Eletrônico (PE)</div>
+  <div class="legenda-item" data-modal="CD" role="button" tabindex="0" title="Clique para filtrar apenas Contratação Direta"><div style="width:14px;height:14px;border-radius:2px;background:rgba(201,162,42,.8)"></div>Contratação Direta (CD)</div>
+  <div class="legenda-item" data-modal="CC" role="button" tabindex="0" title="Clique para filtrar apenas Concorrência"><div style="width:14px;height:14px;border-radius:2px;background:rgba(45,80,22,.8)"></div>Concorrência (CC)</div>
+  <span class="legenda-hint" id="legenda-hint" hidden>· clique de novo para limpar</span>
+</div>
+
+<!--
+  ÁREA DO GANTT: a página rola na vertical e as barras rolam na horizontal.
+-->
+<!-- GANTT -->
+<div class="main">
+  <div class="gantt-card">
+    <!-- Split-panel: painel esquerdo (nomes fixos) + painel direito (barras com scroll) -->
+    <div class="gantt-body" id="gantt-body">
+
+      <!-- PAINEL ESQUERDO — nomes dos processos, sempre visível -->
+      <div class="gl-panel" id="gl-panel">
+        <div class="gl-panel-hdr" id="gl-panel-hdr">Processo / Etapa</div>
+        <div class="gl-panel-body" id="gl-panel-body">
+          <div class="gantt-names" id="gantt-names"></div>
+        </div>
+      </div>
+
+      <!-- PAINEL DIREITO — cabeçalho de meses + barras com scroll horizontal -->
+      <div class="gr-panel" id="gr-panel">
+        <div class="gr-panel-hdr" id="gr-panel-hdr">
+          <div id="gantt-header" style="display:flex;height:100%"></div>
+        </div>
+        <div class="gr-panel-body" id="gr-panel-body">
+          <div class="gantt-bars" id="gantt-bars"></div>
+          <!-- linha Hoje inserida aqui via JS -->
+        </div>
+      </div>
+
+    </div><!-- /gantt-body -->
+  </div><!-- /gantt-card -->
+</div><!-- /main -->
+
+<!-- FILTRO DE MODALIDADE (mobile) — visível só no mobile via CSS -->
+<div class="mob-modal-filter" id="mob-modal-filter">
+  <button class="mob-modal-btn active-all" data-m="">Todos</button>
+  <button class="mob-modal-btn" data-m="pe">Pregão</button>
+  <button class="mob-modal-btn" data-m="cd">Contrat. Direta</button>
+</div>
+
+<!-- LISTA MOBILE — visível apenas em telas ≤ 768px; oculta no desktop -->
+<div id="mobile-list"></div>
+
+<!-- FOOTER — fixo na base da página, fora do card -->
+<div class="footer">
+  <div class="footer-brand">
+    <div class="footer-inst">
+      <span class="footer-name" id="footer-name">Colégio Pedro II</span>
+      <span class="footer-addr" id="footer-addr">Campo de São Cristóvão, 177 · São Cristóvão — Rio de Janeiro / RJ</span>
+    </div>
+  </div>
+  <div class="footer-divider"></div>
+  <div class="footer-contact">
+    <div class="footer-email">
+      <span class="footer-email-lbl">E-mail</span>
+      <span class="footer-email-val" id="footer-email-val">✉&nbsp;central@cp2.g12.br</span>
+    </div>
+  </div>
+  <div style="flex:1"></div>
+  <div class="footer-right">
+    SETOR DE LICITAÇÕES<br>
+    Painel de Contratações · v1.0
+  </div>
+</div>
+
+<!--
+  TOOLTIP
+  Elemento único reutilizado por todos os tooltips.
+  Fica invisível (opacity:0) por padrão; o JS adiciona a classe "show"
+  para exibi-lo. Ao clicar na barra, adiciona "pinned" para fixá-lo.
+-->
+<!-- TOOLTIP -->
+<div class="tt" id="tt"></div>
+
+<script src="painel-logic.js"></script>
+<script src="painel-core.js"></script>
+
+<!-- ─────────────────────────────────────────────────────────────
+  TOOLTIP — div flutuante posicionado pelo JS (positionTT / moveTT)
+  Aparece ao passar o mouse sobre barras do Gantt.
+  Oculto por padrão (display:none via CSS .tt:not(.show)).
+  ───────────────────────────────────────────────────────────── -->
+<div id="tt" class="tt"></div>
+
+<!-- ───────── Seletor de Unidade (público) ───────── -->
+<div id="u-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,18,33,.6);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:24px 16px;overflow:auto">
+  <div style="background:var(--surface,#fff);color:var(--text,#0b1d33);max-width:440px;width:100%;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--cpii-navy,#0b1d33);color:#fff">
+      <strong style="font-size:15px;letter-spacing:.3px">🏛️ Unidades do CPII</strong>
+      <button id="u-modal-close" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div style="padding:18px 20px">
+      <div style="font-size:13px;color:var(--muted,#5a6b80);margin-bottom:10px;line-height:1.4">Selecione a unidade para visualizar os processos da respectiva unidade:</div>
+      <select id="u-select" style="width:100%;padding:11px;font-size:15px;border:1px solid rgba(0,0,0,.25);border-radius:8px;background:#fff;cursor:pointer">
+        <option>Carregando…</option>
+      </select>
+    </div>
+  </div>
+</div>
+<!-- ───────── Modal de Ajuda ───────── -->
+<div id="ajuda-modal" class="ajuda-backdrop">
+  <div class="ajuda-modal">
+    <div class="ajuda-hdr">
+      <strong style="font-size:15px;letter-spacing:.3px">❓ Como usar este painel</strong>
+      <button id="ajuda-modal-close" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div class="ajuda-body">
+      <p>Este é o <b>Painel de Contratações</b> — uma visão pública e somente leitura do andamento das licitações de cada unidade do Colégio Pedro II.</p>
+      <h4>🏛️ Unidade</h4>
+      <p>Use o seletor ao lado da marca (canto superior esquerdo) para escolher a unidade. O painel mostra os processos, o cronograma e a capacidade da unidade selecionada.</p>
+      <h4>📊 Indicadores (KPIs)</h4>
+      <ul>
+        <li><b>Total / Em andamento / Atrasados / Em fila / Concluídos</b> — contagem dos processos por situação.</li>
+        <li><b>Capacidade do setor</b> — quão ocupada está a equipe da unidade (🟢 disponível, 🟡 limitada, 🔴 máxima).</li>
+      </ul>
+      <h4>📅 Cronograma (Gantt)</h4>
+      <p>Cada linha é um processo e suas etapas. Os <b>prazos são contados em dias corridos</b> (incluindo fins de semana e feriados). A linha vertical marca o mês atual.</p>
+      <h4>🔗 Acessos rápidos</h4>
+      <p>Use Página inicial para acessar atas, contratos, documentos, manuais e fluxos.</p>
+      <p style="color:#64748b;font-size:12.5px;margin-top:14px">Os dados são atualizados automaticamente a partir do sistema de gestão das unidades.</p>
+    </div>
+  </div>
+</div>
+<script src="painel-ui.js"></script>
+</body>
+</html>

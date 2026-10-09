@@ -209,3 +209,5 @@ h1 { margin: 0 0 6px; color: var(--navy); font-size: clamp(29px, 3.5vw, 38px); l
   .brand small { font-size: 10px; }
   .status-options span { padding: 0 3px; font-size: 10px; }
 }
+
+.atas-guidance{margin:0 0 24px;padding:20px 24px;background:#eaf0f7;border-radius:10px;color:#244361}.atas-guidance h2{font-size:16px;margin:0 0 10px}.atas-guidance p{font-size:14px;line-height:1.65;margin:8px 0;max-width:95ch}@media(max-width:600px){.atas-guidance{padding:16px}.atas-guidance p{font-size:13px}}

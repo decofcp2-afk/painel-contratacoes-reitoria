@@ -1,4 +1,6 @@
 window.PAINEL_CONFIG = {
+  // Formulário público e biblioteca; pedidos privados são atendidos no App Gestão.
+  ntApiUrl: "https://script.google.com/macros/s/AKfycbysFfbpofy4bf0qODi429gKX0dd621Si08_P9_e4nBajeuth1UV8cD4gu8JKtR2_TWcYw/exec",
   // URL /exec do Apps Script — mantida por compatibilidade durante a transicao.
   apiUrl: "https://script.google.com/macros/s/AKfycby1QQr6sq9Tk1W2Xb6aMkaMzW8w4B3d6Aegr9vZ3TtSoNmc-5JjbFkPdoIsc1Ra4zBZ/exec",
 
