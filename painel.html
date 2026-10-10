@@ -173,7 +173,6 @@ body{display:flex;flex-direction:column;min-height:100vh;background:var(--bg);co
   .links-uteis-wrap{display:block}
   .links-uteis-menu .ajuda-link-mob{display:flex}
 }
-.top-bar .portal-back{color:#fff;background:transparent;border:1px solid rgba(255,255,255,.55);padding:9px 12px;font:600 13px var(--sans);letter-spacing:0;border-radius:7px}
 .top-meta{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--cpii-navy);background:rgba(201,162,42,.15);border:1px solid rgba(201,162,42,.35);padding:2px 7px;border-radius:3px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;transition:background .2s,border-color .2s}
 .top-meta:hover{background:rgba(201,162,42,.3);border-color:var(--cpii-gold)}
 
@@ -866,6 +865,7 @@ body{display:flex;flex-direction:column;min-height:100vh;background:var(--bg);co
   .mob-etapa { padding: 8px 10px; font-size: 12px; }
 }
 </style>
+<link rel="stylesheet" href="portal-home-link.css?v=20261010">
 <script src="portal.js?v=20261009" defer></script>
 <script src="config.js"></script>
 <!-- Firebase (compat) — leitura direta do Firestore. A apiKey em config.js NAO e segredo;
@@ -890,7 +890,7 @@ body{display:flex;flex-direction:column;min-height:100vh;background:var(--bg);co
     <button class="unit-selector" id="btn-troca-unidade" title="Trocar a unidade exibida">🏛️ Reitoria ▾</button>
   </div>
   <div class="top-right">
-    <a class="top-meta portal-back" href="index.html" data-unidade>← Página inicial</a>
+    <a class="portal-home-link" href="index.html" data-unidade aria-label="Página inicial" title="Página inicial"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 10 9-7 9 7M5 9v11h5v-6h4v6h5V9"/></svg><span class="portal-home-label">Página inicial</span></a>
   </div>
 </div>
 <!-- Menu flutuante de links para mobile pequeno -->

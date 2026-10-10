@@ -29,14 +29,6 @@ button { cursor: pointer; }
 .brand-logo { display: block; width: 63px; height: 50px; object-fit: contain; flex: none; }
 .brand strong { display: block; color: #a3811c; font: 700 11px Georgia, serif; letter-spacing: 1.6px; }
 .brand small { display: block; font-size: 14px; font-weight: 600; margin-top: 3px; white-space: nowrap; }
-.back-link {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 8px 12px; border: 1px solid rgba(255,255,255,.65); border-radius: 7px;
-  color: #fff; font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap;
-  background: rgba(11,31,61,.07);
-}
-.back-link:hover { background: rgba(11,31,61,.24); }
-.back-arrow { font-size: 18px; line-height: 1; }
 
 .intro { padding: 32px 0 22px; }
 h1 { margin: 0 0 6px; color: var(--navy); font-size: clamp(29px, 3.5vw, 38px); letter-spacing: -.9px; line-height: 1.2; }
@@ -174,8 +166,6 @@ h1 { margin: 0 0 6px; color: var(--navy); font-size: clamp(29px, 3.5vw, 38px); l
   .brand-logo { width: 53px; height: 42px; }
   .brand strong { font-size: 9px; }
   .brand small { font-size: 11px; }
-  .back-link { width: 34px; height: 34px; padding: 0; }
-  .back-text { display: none; }
   .intro { padding: 27px 0 20px; }
   .intro-copy { font-size: 14px; }
   .scope-selector { display: block; }
