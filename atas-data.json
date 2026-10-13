@@ -1,7 +1,7 @@
 {
   "source": "https://dadosabertos.compras.gov.br/modulo-arp/1_consultarARP",
   "scope": "Atas gerenciadas pela UASG 153167 — Colégio Pedro II",
-  "generatedAt": "2026-10-13T09:31:23Z",
+  "generatedAt": "2026-10-13T17:38:46Z",
   "items": [
     {
       "numeroAtaRegistroPreco": "00005/2023",
@@ -7940,6 +7940,28 @@
       "numeroProcesso": null,
       "fonteOficial": "pncp",
       "dataAtualizacaoPncp": "2026-05-12"
+    },
+    {
+      "numeroAtaRegistroPreco": "01129/2026",
+      "codigoUnidadeGerenciadora": "153167",
+      "nomeUnidadeGerenciadora": "COLEGIO PEDRO II/REITORIA",
+      "nomeOrgao": "COLEGIO PEDRO II",
+      "codigoOrgao": 26201,
+      "objeto": "Contratação de serviços de engenharia contínuos de manutenção predial preventiva, corretiva e preditiva, com fornecimento de peças, materiais de consumo, insumos e mão de obra, bem como para a realização de serviços eventuais diversas, sistemas e instalações prediais utilizados pelo  Colégio Pedro II.",
+      "dataAssinatura": "2026-10-13",
+      "dataVigenciaInicial": "2026-10-14",
+      "dataVigenciaFinal": "2027-10-14",
+      "ataExcluido": false,
+      "statusAta": "Ata de Registro de Preços",
+      "numeroControlePncpAta": "42414284000102-1-000102/2025-000004",
+      "possibilidadeAdesao": false,
+      "numeroCompra": "90017",
+      "anoCompra": "2025",
+      "numeroProcesso": null,
+      "linkCompraPNCP": "https://pncp.gov.br/app/editais/42414284000102/2025/102",
+      "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2025/102/4",
+      "fonteOficial": "pncp",
+      "dataAtualizacaoPncp": "2026-10-13"
     },
     {
       "numeroAtaRegistroPreco": "02017/2025",
