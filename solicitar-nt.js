@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  var nonce='',files=[],enviando=false,api;
+  var nonce='',chaveEnvio='',files=[],enviando=false,api,edicao=null;
   var $=function(id){return document.getElementById(id);};
   function mensagem(texto,tipo){$('status').textContent=texto;$('status').className='status '+(tipo||'');$('status').hidden=false;}
   async function preparar(preservarMensagem){
@@ -9,7 +9,7 @@
       api=api||NTFormAPI.create(window.PAINEL_CONFIG&&window.PAINEL_CONFIG.ntApiUrl,window.fetch.bind(window));
       var r=await api.prepare();
       if(!r.ok)throw new Error(r.erro||'Não foi possível preparar o formulário.');
-      nonce=r.nonce;$('pedido').hidden=false;$('enviar').disabled=false;
+      nonce=r.nonce;chaveEnvio=r.chave||'';$('pedido').hidden=false;$('enviar').disabled=false;
       if(!preservarMensagem)$('status').hidden=true;
     }catch(e){mensagem(e.message||'Não foi possível carregar o formulário. Tente novamente.','error');$('tentar').hidden=false;}
   }
@@ -17,26 +17,64 @@
   function renderFiles(){var ul=$('lista-arquivos');ul.replaceChildren();files.forEach(function(f,i){var li=document.createElement('li'),span=document.createElement('span'),b=document.createElement('button');span.textContent=f.name+' · '+(f.size/1024/1024).toFixed(2)+' MB';b.type='button';b.textContent='Remover';b.setAttribute('aria-label','Remover '+f.name);b.disabled=enviando;b.onclick=function(){files.splice(i,1);renderFiles();};li.append(span,b);ul.append(li);});$('total').textContent=files.length?files.length+' arquivo(s) · '+(files.reduce(function(n,f){return n+f.size;},0)/1024/1024).toFixed(2)+' de 10 MB':'Nenhum arquivo selecionado.';}
   $('arquivos').addEventListener('change',function(){try{var novos=files.concat(Array.from(this.files));validarFiles(novos);files=novos;renderFiles();$('status').hidden=true;}catch(e){mensagem(e.message,'error');}this.value='';});
   function ler(f){return new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){resolve({nome:f.name,tipo:f.type,base64:String(reader.result).split(',')[1]});};reader.onerror=function(){reject(new Error('Não foi possível ler '+f.name+'.'));};reader.readAsDataURL(f);});}
-  function desbloquear(){enviando=false;Array.from($('pedido').elements).forEach(function(e){e.disabled=false;});$('enviar').textContent='Enviar solicitação';renderFiles();}
+  function desbloquear(){enviando=false;Array.from($('pedido').elements).forEach(function(e){e.disabled=false;});$('enviar').textContent=edicao?'Salvar alterações':'Enviar solicitação';renderFiles();}
   $('pedido').addEventListener('submit',async function(event){
-    event.preventDefault();if(enviando||!nonce||!this.reportValidity())return;
+    event.preventDefault();if(enviando||(!nonce&&!edicao)||!this.reportValidity())return;
     try {
       validarFiles(files);
-      var dados={nonce:nonce,nome:$('nome').value,email:$('email').value,unidade:$('unidade').value,assunto:$('assunto').value,descricao:$('descricao').value,site:$('site').value};
+      var dados={nonce:nonce,chave:chaveEnvio,nome:$('nome').value,email:$('email').value,unidade:$('unidade').value,assunto:$('assunto').value,descricao:$('descricao').value,site:$('site').value};
       enviando=true;Array.from(this.elements).forEach(function(e){e.disabled=true;});$('enviar').textContent='Enviando…';
       mensagem('Enviando sua solicitação. Aguarde a confirmação antes de fechar a página.');
+      if(edicao){
+        var alterado=await api.update(Object.assign(dados,edicao));
+        desbloquear();
+        if(!alterado.ok){mensagem(alterado.erro||'Não foi possível salvar.','error');return;}
+        $('pedido').hidden=true;edicao=null;
+        mensagem('Alterações salvas. O protocolo e os anexos foram preservados. Consulte novamente para fazer outras alterações.','success');return;
+      }
       dados.arquivos=await Promise.all(files.map(ler));
       var r=await api.submit(dados);
       if(!r.ok){desbloquear();mensagem(r.erro||'Não foi possível enviar a solicitação.','error');await preparar(true);return;}
-      $('pedido').hidden=true;files=[];
+      $('pedido').hidden=true;files=[];desbloquear();
+      if(r.chave){$('protocolo-recebido').value=r.protocolo;$('chave-recebida').value=r.chave;$('acesso-recebido').hidden=false;}
       mensagem('Solicitação recebida. Seu protocolo é '+r.protocolo+'. Guarde esse número para consultar o atendimento junto à DECOF.','success');
     }catch(e){
       desbloquear();
       // Conserva o nonce em falhas de conexão: o servidor recupera o mesmo
       // protocolo caso já tenha recebido o pedido, sem duplicar anexos/avisos.
-      mensagem('Não foi possível confirmar o envio. '+(e.message||'Verifique a conexão.')+' Tente enviar novamente; o mesmo protocolo será recuperado se o pedido já foi recebido.','error');
+      mensagem(edicao?'Não foi possível confirmar a alteração. Consulte o pedido novamente para verificar os dados.':('Não foi possível confirmar o envio. '+(e.message||'Verifique a conexão.')+' Tente enviar novamente; o mesmo protocolo será recuperado se o pedido já foi recebido.'),'error');
     }
   });
   $('tentar').addEventListener('click',function(){mensagem('Preparando o formulário…');preparar();});
+  async function consultar(){
+    if(enviando||!$('consulta').reportValidity())return;
+    enviando=true;$('consultar').disabled=true;$('pedido').hidden=true;
+    try{
+      api=api||NTFormAPI.create(window.PAINEL_CONFIG&&window.PAINEL_CONFIG.ntApiUrl,window.fetch.bind(window));
+      var acesso={protocolo:$('protocolo').value.trim().toUpperCase(),chave:$('chave').value.trim()};
+      var r=await api.consult(acesso);
+      if(!r.ok)throw new Error(r.erro||'Não foi possível consultar.');
+      edicao=null;
+      if(!r.pedido.editavel){mensagem('Situação do pedido: '+({atendida:'atendido',encerrada:'encerrado',excluida:'excluído'}[r.pedido.status]||r.pedido.status)+'. Este pedido não pode ser alterado.');return;}
+      edicao=Object.assign(acesso,{versao:r.pedido.versao});
+      ['nome','email','unidade','assunto','descricao'].forEach(function(k){$(k).value=r.pedido[k];});
+      files=[];renderFiles();$('ciente').checked=true;$('site').value='';
+      $('anexos-novos').hidden=true;$('anexos-preservados').hidden=false;
+      $('anexos-preservados').textContent='Os anexos originais serão preservados: '+((r.pedido.anexos||[]).map(function(a){return a.nome;}).join(', ')||'nenhum anexo')+'. Para corrigir anexos, exclua o pedido e envie uma nova solicitação.';
+      $('acoes-edicao').hidden=false;$('pedido').hidden=false;
+      mensagem('Editando a solicitação '+r.pedido.protocolo+'.','success');
+    }catch(e){edicao=null;mensagem(e.message||'Não foi possível consultar.','error');}
+    finally{enviando=false;$('consultar').disabled=false;desbloquear();}
+  }
+  $('consulta').addEventListener('submit',function(e){e.preventDefault();consultar();});
+  $('editar-recebido').addEventListener('click',function(){ $('gerenciar').open=true;$('protocolo').value=$('protocolo-recebido').value;$('chave').value=$('chave-recebida').value;consultar(); });
+  $('cancelar-edicao').addEventListener('click',function(){if(enviando)return;edicao=null;$('pedido').reset();files=[];renderFiles();$('acoes-edicao').hidden=true;$('anexos-novos').hidden=false;$('anexos-preservados').hidden=true;desbloquear();preparar();});
+  $('excluir').addEventListener('click',async function(){
+    if(enviando||!edicao||!window.confirm('Excluir esta solicitação e seus anexos? O pedido deixará de ser atendido. O protocolo e o histórico permanecerão registrados.'))return;
+    enviando=true;Array.from($('pedido').elements).forEach(function(e){e.disabled=true;});
+    try{var r=await api.remove(edicao);if(!r.ok)throw new Error(r.erro||'Não foi possível excluir.');edicao=null;$('pedido').hidden=true;$('acesso-recebido').hidden=true;mensagem('Solicitação excluída.'+(r.exclusaoPendente?' A limpeza dos anexos será tentada novamente automaticamente.':''),'success');}
+    catch(e){mensagem('Não foi possível confirmar a exclusão. '+(e.message||'Consulte o pedido novamente.'),'error');}
+    finally{desbloquear();}
+  });
   preparar();
 })();

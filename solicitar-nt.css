@@ -21,6 +21,15 @@
 .nt-form .consent label{display:inline;font-weight:400;margin:0}
 .nt-form .summary{font-size:13px}
 .nt-form #tentar{margin-top:12px}
+.nt-form #consulta{margin:24px 0;padding:20px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.nt-form .portal-button{margin-top:16px;white-space:normal}
+.nt-form .danger{background:#fff1ef;color:#902c24;border:1px solid #d89c95}
+.nt-form #acoes-edicao{display:flex;flex-wrap:wrap;gap:12px}
+.nt-form [hidden]{display:none!important}
 .nt-form input,.nt-form textarea{caret-color:var(--blue)}
 .nt-form ::selection{background:#dbe8f5;color:var(--navy)}
 @media(max-width:600px){.nt-form{padding:18px 14px}.nt-form .grid{grid-template-columns:1fr}}
+
+.nt-form #gerenciar{margin:20px 0;padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.nt-form #gerenciar summary{cursor:pointer;color:var(--navy);font-weight:600}
+.nt-form #consulta{border:0;margin:0;padding:0}

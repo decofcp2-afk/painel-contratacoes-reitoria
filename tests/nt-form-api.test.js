@@ -23,3 +23,11 @@ test('falha de conexão não modifica o nonce usado para recuperar o protocolo n
   assert.equal(calls[0],calls[1]);assert.equal(dados.nonce,'mesmo-nonce');
   assert.throws(()=>create('https://example.org/exec',()=>{}),/configuração/);
 });
+
+test('consulta, edição e exclusão enviam chave privada somente no corpo POST',async()=>{
+ const calls=[];const api=create(url,async(u,o)=>{calls.push([u,o]);return {ok:true,json:async()=>({ok:true})};});
+ const data={protocolo:'NT-1',chave:'segredo',versao:'v1'};
+ await api.consult(data);await api.update(data);await api.remove(data);
+ assert.deepEqual(calls.map(([u])=>u.split('route=')[1]),['nt.consultar','nt.editar','nt.excluir']);
+ for(const [u,o]of calls){assert.equal(o.method,'POST');assert.equal(o.credentials,'omit');assert.ok(!u.includes('segredo'));assert.equal(JSON.parse(o.body).chave,'segredo');}
+});

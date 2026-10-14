@@ -26,7 +26,10 @@
     }
     return {
       prepare:function(){return request('nt.preparar');},
-      submit:function(data){return request('nt.enviar',data);}
+      submit:function(data){return request('nt.enviar',data);},
+      consult:function(data){return request('nt.consultar',data);},
+      update:function(data){return request('nt.editar',data);},
+      remove:function(data){return request('nt.excluir',data);}
     };
   }
   if (typeof module === 'object' && module.exports) module.exports = {create:create};
