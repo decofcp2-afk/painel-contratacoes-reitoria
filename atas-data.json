@@ -1,7 +1,7 @@
 {
   "source": "https://dadosabertos.compras.gov.br/modulo-arp/1_consultarARP",
   "scope": "Atas gerenciadas pela UASG 153167 — Colégio Pedro II",
-  "generatedAt": "2026-10-16T12:30:23Z",
+  "generatedAt": "2026-10-16T17:31:55Z",
   "items": [
     {
       "numeroAtaRegistroPreco": "00005/2023",
@@ -8172,6 +8172,28 @@
       "ataExcluido": false,
       "numeroControlePncpAta": "42414284000102-1-000186/2024-000002",
       "idCompra": "15316705900272024"
+    },
+    {
+      "numeroAtaRegistroPreco": "00311/2026",
+      "codigoUnidadeGerenciadora": "153167",
+      "nomeUnidadeGerenciadora": "COLEGIO PEDRO II/REITORIA",
+      "nomeOrgao": "COLEGIO PEDRO II",
+      "codigoOrgao": 26201,
+      "objeto": "Contratação de serviços de sonorização, iluminação e transmissão ao vivo, por meio de Sistema de Registro de Preços, para viabilizar a realização de eventos institucionais do Colégio Pedro II, garantindo qualidade técnica, acessibilidade, adequada captação de imagens e ampliação do alcance das ações acadêmicas, científicas e culturais.\n",
+      "dataAssinatura": "2026-10-14",
+      "dataVigenciaInicial": "2026-10-19",
+      "dataVigenciaFinal": "2027-10-19",
+      "ataExcluido": false,
+      "statusAta": "Ata de Registro de Preços",
+      "numeroControlePncpAta": "42414284000102-1-000148/2026-000001",
+      "possibilidadeAdesao": true,
+      "numeroCompra": "311",
+      "anoCompra": "2026",
+      "numeroProcesso": "23040.005462/2025-17",
+      "linkCompraPNCP": "https://pncp.gov.br/app/editais/42414284000102/2026/148",
+      "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2026/148/1",
+      "fonteOficial": "pncp",
+      "dataAtualizacaoPncp": "2026-10-16"
     },
     {
       "numeroAtaRegistroPreco": "00009/2023",
