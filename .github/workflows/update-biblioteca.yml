@@ -1,0 +1,38 @@
+name: Atualizar biblioteca pública
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/update_biblioteca.mjs
+      - .github/workflows/update-biblioteca.yml
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: atualizar-biblioteca
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Consultar documentos publicados
+        run: node scripts/update_biblioteca.mjs
+      - name: Atualizar cópia pública
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if test -z "$(git status --porcelain -- biblioteca-publica.json)"; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add biblioteca-publica.json
+          git commit -m 'dados: atualizar biblioteca pública'
+          git pull --rebase
+          git push
+          gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds"
