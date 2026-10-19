@@ -152,6 +152,11 @@ body{display:flex;flex-direction:column;min-height:100vh;background:var(--bg);co
 .brand-title{font-size:14px;font-weight:600;color:var(--text2);letter-spacing:.3px;line-height:1.2}
 .brand-chip{background:rgba(201,162,42,.15);color:var(--cpii-gold);border:1px solid rgba(201,162,42,.35);font-family:var(--mono);font-size:13px;font-weight:700;padding:4px 10px;border-radius:3px;letter-spacing:1.5px;margin-left:3px}
 .top-right{display:flex;align-items:center;gap:8px}
+.acesso-restrito-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;min-width:34px;min-height:34px;padding:0 10px;border:1px solid rgba(255,255,255,.75);border-radius:6px;background:var(--cpii-navy);color:#fff;font:600 12px/1.2 var(--sans);text-decoration:none;white-space:nowrap;touch-action:manipulation}
+.acesso-restrito-btn:hover{background:#163a65}
+.acesso-restrito-btn:focus-visible{outline:3px solid var(--cpii-gold);outline-offset:3px}
+.acesso-restrito-btn svg{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:650px){.acesso-restrito-btn{width:36px;min-width:36px;min-height:36px;padding:0}.acesso-restrito-label{display:none}}
 .desktop-quick-links{display:flex;align-items:center;gap:7px;white-space:nowrap;padding:0}
 .desktop-quick-links .top-meta{min-height:35px;padding:7px 11px;border:1px solid rgba(255,255,255,.65);border-radius:7px;background:transparent;color:var(--cpii-navy);font-family:var(--sans);font-size:12px;letter-spacing:.1px;cursor:pointer;transition:background .18s ease,box-shadow .18s ease,transform .18s ease}
 .desktop-quick-links .top-meta:hover{background:rgba(255,255,255,.88);box-shadow:0 3px 9px rgba(11,31,61,.14);transform:translateY(-1px)}
@@ -842,7 +847,7 @@ body{display:flex;flex-direction:column;min-height:100vh;background:var(--bg);co
   /* Header: marca + botões de ação apenas */
   .top-bar { padding: 6px 10px; }
   .brand-logo { height: 28px; width: 28px; }
-  .brand-title { font-size: 11px; }
+  .brand-title { font-size: 11px; white-space: normal; }
   .brand-inst  { font-size: 9px; }
 
   /* KPIs ainda menores */
@@ -865,7 +870,7 @@ body{display:flex;flex-direction:column;min-height:100vh;background:var(--bg);co
   .mob-etapa { padding: 8px 10px; font-size: 12px; }
 }
 </style>
-<link rel="stylesheet" href="portal-home-link.css?v=20261010">
+<link rel="stylesheet" href="portal-home-link.css?v=20261016-compacto">
 <script src="portal.js?v=20261009" defer></script>
 <script src="config.js"></script>
 <!-- Firebase (compat) — leitura direta do Firestore. A apiKey em config.js NAO e segredo;
@@ -890,6 +895,7 @@ body{display:flex;flex-direction:column;min-height:100vh;background:var(--bg);co
     <button class="unit-selector" id="btn-troca-unidade" title="Trocar a unidade exibida">🏛️ Reitoria ▾</button>
   </div>
   <div class="top-right">
+    <a class="acesso-restrito-btn" href="https://decofcp2-afk.github.io/app_gestao-reitoria/" target="_blank" rel="noopener noreferrer" aria-label="Acesso restrito — App Gestão (abre em nova aba)" title="Acesso restrito — App Gestão"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4M12 14v3"/></svg><span class="acesso-restrito-label">Acesso restrito</span></a>
     <a class="portal-home-link" href="index.html" data-unidade aria-label="Página inicial" title="Página inicial"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 10 9-7 9 7M5 9v11h5v-6h4v6h5V9"/></svg><span class="portal-home-label">Página inicial</span></a>
   </div>
 </div>

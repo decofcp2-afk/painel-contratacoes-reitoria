@@ -1,18 +1,18 @@
-/* Acesso à página inicial compartilhado pelo Painel e pela consulta de atas. */
+/* Acesso à página inicial compartilhado por todas as páginas do portal. */
 .portal-home-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  gap: 8px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 14px;
+  gap: 6px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0 10px;
   border: 1px solid #d3dfed;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #f4f7fc;
   color: #1e4e8c;
-  font: 600 13px/1.2 'Segoe UI', Arial, sans-serif;
+  font: 600 12px/1.2 'Segoe UI', Arial, sans-serif;
   text-decoration: none;
   white-space: nowrap;
   touch-action: manipulation;
@@ -29,8 +29,8 @@
 }
 .portal-home-link svg {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
   flex: none;
   fill: none;
   stroke: currentColor;
@@ -39,7 +39,7 @@
   stroke-linejoin: round;
 }
 @media (max-width: 650px) {
-  .portal-home-link { width: 44px; padding: 0; }
+  .portal-home-link { width: 36px; min-width: 36px; min-height: 36px; padding: 0; }
   .portal-home-label { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
