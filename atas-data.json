@@ -1,7 +1,7 @@
 {
   "source": "https://dadosabertos.compras.gov.br/modulo-arp/1_consultarARP",
   "scope": "Atas gerenciadas pela UASG 153167 — Colégio Pedro II",
-  "generatedAt": "2026-10-19T13:36:21Z",
+  "generatedAt": "2026-10-19T19:59:28Z",
   "items": [
     {
       "numeroAtaRegistroPreco": "00005/2023",
@@ -6958,6 +6958,28 @@
       "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2026/134/3",
       "fonteOficial": "pncp",
       "dataAtualizacaoPncp": "2026-09-24"
+    },
+    {
+      "numeroAtaRegistroPreco": "01102/2026",
+      "codigoUnidadeGerenciadora": "153167",
+      "nomeUnidadeGerenciadora": "COLEGIO PEDRO II/REITORIA",
+      "nomeOrgao": "COLEGIO PEDRO II",
+      "codigoOrgao": 26201,
+      "objeto": "Aquisição de materiais esportivos e educativos, bem como de itens de premiação (medalhas e troféus), destinados à realização de atividades e eventos esportivos institucionais.",
+      "dataAssinatura": "2026-10-16",
+      "dataVigenciaInicial": "2026-10-16",
+      "dataVigenciaFinal": "2027-10-16",
+      "ataExcluido": false,
+      "statusAta": "Ata de Registro de Preços",
+      "numeroControlePncpAta": "42414284000102-1-000134/2026-000012",
+      "possibilidadeAdesao": true,
+      "numeroCompra": "90011",
+      "anoCompra": "2026",
+      "numeroProcesso": null,
+      "linkCompraPNCP": "https://pncp.gov.br/app/editais/42414284000102/2026/134",
+      "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2026/134/12",
+      "fonteOficial": "pncp",
+      "dataAtualizacaoPncp": "2026-10-19"
     },
     {
       "numeroAtaRegistroPreco": "01103/2026",
