@@ -1,7 +1,7 @@
 {
   "source": "https://dadosabertos.compras.gov.br/modulo-arp/1_consultarARP",
   "scope": "Atas gerenciadas pela UASG 153167 — Colégio Pedro II",
-  "generatedAt": "2026-10-21T13:53:51Z",
+  "generatedAt": "2026-10-21T18:44:06Z",
   "items": [
     {
       "numeroAtaRegistroPreco": "00005/2023",
@@ -347,6 +347,28 @@
       "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2026/143/1",
       "fonteOficial": "pncp",
       "dataAtualizacaoPncp": "2026-09-11"
+    },
+    {
+      "numeroAtaRegistroPreco": "00294/2026",
+      "codigoUnidadeGerenciadora": "153167",
+      "nomeUnidadeGerenciadora": "COLEGIO PEDRO II/REITORIA",
+      "nomeOrgao": "COLEGIO PEDRO II",
+      "codigoOrgao": 26201,
+      "objeto": "Aquisição  de gêneros alimentícios perecíveis e não perecíveis, estocáveis destinados a elaboração de refeições para os alunos do Colégio Pedro II",
+      "dataAssinatura": "2026-10-21",
+      "dataVigenciaInicial": "2026-10-22",
+      "dataVigenciaFinal": "2027-10-22",
+      "ataExcluido": false,
+      "statusAta": "Ata de Registro de Preços",
+      "numeroControlePncpAta": "42414284000102-1-000143/2026-000002",
+      "possibilidadeAdesao": false,
+      "numeroCompra": "94",
+      "anoCompra": "2026",
+      "numeroProcesso": "23040.000132/2026-16",
+      "linkCompraPNCP": "https://pncp.gov.br/app/editais/42414284000102/2026/143",
+      "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2026/143/2",
+      "fonteOficial": "pncp",
+      "dataAtualizacaoPncp": "2026-10-21"
     },
     {
       "numeroAtaRegistroPreco": "17005/2024",
