@@ -1,7 +1,7 @@
 {
   "source": "https://dadosabertos.compras.gov.br/modulo-arp/1_consultarARP",
   "scope": "Atas gerenciadas pela UASG 153167 — Colégio Pedro II",
-  "generatedAt": "2026-10-29T00:02:27Z",
+  "generatedAt": "2026-10-29T05:56:34Z",
   "items": [
     {
       "numeroAtaRegistroPreco": "00005/2023",
@@ -5105,7 +5105,7 @@
       "anoCompra": "2025",
       "dataAssinatura": "2025-10-28",
       "dataVigenciaInicial": "2025-10-30",
-      "dataVigenciaFinal": "2026-10-29",
+      "dataVigenciaFinal": "2027-10-29",
       "statusAta": "Ata de Registro de Preços",
       "objeto": "Aquisição de materiais pedagógicos, itens de cozinha, mobiliários e eletrônicos para o campus São Cristóvão I",
       "ataExcluido": false,
@@ -5114,7 +5114,7 @@
       "possibilidadeAdesao": false,
       "numeroProcesso": null,
       "fonteOficial": "pncp",
-      "dataAtualizacaoPncp": "2026-05-12"
+      "dataAtualizacaoPncp": "2026-10-28"
     },
     {
       "numeroAtaRegistroPreco": "10015/2025",
@@ -5312,7 +5312,7 @@
       "anoCompra": "2025",
       "dataAssinatura": "2025-10-28",
       "dataVigenciaInicial": "2025-10-30",
-      "dataVigenciaFinal": "2026-10-29",
+      "dataVigenciaFinal": "2027-10-29",
       "statusAta": "Ata de Registro de Preços",
       "objeto": "Aquisição de materiais pedagógicos, itens de cozinha, mobiliários e eletrônicos para o campus São Cristóvão I",
       "ataExcluido": false,
@@ -5321,7 +5321,7 @@
       "possibilidadeAdesao": false,
       "numeroProcesso": null,
       "fonteOficial": "pncp",
-      "dataAtualizacaoPncp": "2026-05-12"
+      "dataAtualizacaoPncp": "2026-10-28"
     },
     {
       "numeroAtaRegistroPreco": "10024/2025",
@@ -5381,7 +5381,7 @@
       "anoCompra": "2025",
       "dataAssinatura": "2025-10-28",
       "dataVigenciaInicial": "2025-10-30",
-      "dataVigenciaFinal": "2026-10-29",
+      "dataVigenciaFinal": "2027-10-29",
       "statusAta": "Ata de Registro de Preços",
       "objeto": "Aquisição de materiais pedagógicos, itens de cozinha, mobiliários e eletrônicos para o campus São Cristóvão I",
       "ataExcluido": false,
@@ -5390,7 +5390,7 @@
       "possibilidadeAdesao": false,
       "numeroProcesso": null,
       "fonteOficial": "pncp",
-      "dataAtualizacaoPncp": "2026-05-12"
+      "dataAtualizacaoPncp": "2026-10-28"
     },
     {
       "numeroAtaRegistroPreco": "10027/2025",
@@ -5565,7 +5565,7 @@
       "anoCompra": "2025",
       "dataAssinatura": "2025-10-29",
       "dataVigenciaInicial": "2025-10-30",
-      "dataVigenciaFinal": "2026-10-29",
+      "dataVigenciaFinal": "2027-10-29",
       "statusAta": "Ata de Registro de Preços",
       "objeto": "Aquisição de materiais pedagógicos, itens de cozinha, mobiliários e eletrônicos para o campus São Cristóvão I",
       "ataExcluido": false,
@@ -5574,7 +5574,7 @@
       "possibilidadeAdesao": false,
       "numeroProcesso": null,
       "fonteOficial": "pncp",
-      "dataAtualizacaoPncp": "2026-05-12"
+      "dataAtualizacaoPncp": "2026-10-28"
     },
     {
       "numeroAtaRegistroPreco": "10035/2025",
