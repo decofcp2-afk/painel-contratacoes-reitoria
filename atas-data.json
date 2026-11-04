@@ -1,7 +1,7 @@
 {
   "source": "https://dadosabertos.compras.gov.br/modulo-arp/1_consultarARP",
   "scope": "Atas gerenciadas pela UASG 153167 — Colégio Pedro II",
-  "generatedAt": "2026-11-04T15:30:22Z",
+  "generatedAt": "2026-11-04T21:57:13Z",
   "items": [
     {
       "numeroAtaRegistroPreco": "00005/2023",
@@ -414,7 +414,7 @@
       "possibilidadeAdesao": false,
       "numeroProcesso": null,
       "fonteOficial": "pncp",
-      "dataAtualizacaoPncp": "2026-05-14"
+      "dataAtualizacaoPncp": "2026-11-04"
     },
     {
       "numeroAtaRegistroPreco": "26001/2024",
@@ -936,7 +936,7 @@
       "linkCompraPNCP": "https://pncp.gov.br/app/editais/42414284000102/2026/161",
       "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2026/161/3",
       "fonteOficial": "pncp",
-      "dataAtualizacaoPncp": "2026-11-03"
+      "dataAtualizacaoPncp": "2026-11-04"
     },
     {
       "numeroAtaRegistroPreco": "04308/2026",
@@ -4876,7 +4876,7 @@
       "possibilidadeAdesao": true,
       "numeroProcesso": null,
       "fonteOficial": "pncp",
-      "dataAtualizacaoPncp": "2026-07-14"
+      "dataAtualizacaoPncp": "2026-11-04"
     },
     {
       "numeroAtaRegistroPreco": "00022/2025",
@@ -7903,7 +7903,7 @@
       "linkCompraPNCP": "https://pncp.gov.br/app/editais/42414284000102/2026/134",
       "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2026/134/7",
       "fonteOficial": "pncp",
-      "dataAtualizacaoPncp": "2026-09-24"
+      "dataAtualizacaoPncp": "2026-11-04"
     },
     {
       "numeroAtaRegistroPreco": "01111/2026",
@@ -8082,6 +8082,28 @@
       "dataAtualizacaoPncp": "2026-10-20"
     },
     {
+      "numeroAtaRegistroPreco": "01122/2026",
+      "codigoUnidadeGerenciadora": "153167",
+      "nomeUnidadeGerenciadora": "COLEGIO PEDRO II/REITORIA",
+      "nomeOrgao": "COLEGIO PEDRO II",
+      "codigoOrgao": 26201,
+      "objeto": "Aquisição de materiais esportivos e educativos, bem como de itens de premiação (medalhas e troféus), destinados à realização de atividades e eventos esportivos institucionais.",
+      "dataAssinatura": "2026-10-27",
+      "dataVigenciaInicial": "2026-10-27",
+      "dataVigenciaFinal": "2027-10-27",
+      "ataExcluido": false,
+      "statusAta": "Ata de Registro de Preços",
+      "numeroControlePncpAta": "42414284000102-1-000134/2026-000023",
+      "possibilidadeAdesao": true,
+      "numeroCompra": "90011",
+      "anoCompra": "2026",
+      "numeroProcesso": null,
+      "linkCompraPNCP": "https://pncp.gov.br/app/editais/42414284000102/2026/134",
+      "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2026/134/23",
+      "fonteOficial": "pncp",
+      "dataAtualizacaoPncp": "2026-11-04"
+    },
+    {
       "numeroAtaRegistroPreco": "01123/2026",
       "codigoUnidadeGerenciadora": "153167",
       "nomeUnidadeGerenciadora": "COLEGIO PEDRO II/REITORIA",
@@ -8102,6 +8124,28 @@
       "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2026/134/11",
       "fonteOficial": "pncp",
       "dataAtualizacaoPncp": "2026-09-28"
+    },
+    {
+      "numeroAtaRegistroPreco": "01124/2026",
+      "codigoUnidadeGerenciadora": "153167",
+      "nomeUnidadeGerenciadora": "COLEGIO PEDRO II/REITORIA",
+      "nomeOrgao": "COLEGIO PEDRO II",
+      "codigoOrgao": 26201,
+      "objeto": "Aquisição de materiais esportivos e educativos, bem como de itens de premiação (medalhas e troféus), destinados à realização de atividades e eventos esportivos institucionais.",
+      "dataAssinatura": "2026-10-21",
+      "dataVigenciaInicial": "2026-10-21",
+      "dataVigenciaFinal": "2027-10-21",
+      "ataExcluido": false,
+      "statusAta": "Ata de Registro de Preços",
+      "numeroControlePncpAta": "42414284000102-1-000134/2026-000024",
+      "possibilidadeAdesao": true,
+      "numeroCompra": "90011",
+      "anoCompra": "2026",
+      "numeroProcesso": null,
+      "linkCompraPNCP": "https://pncp.gov.br/app/editais/42414284000102/2026/134",
+      "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2026/134/24",
+      "fonteOficial": "pncp",
+      "dataAtualizacaoPncp": "2026-11-04"
     },
     {
       "numeroAtaRegistroPreco": "01125/2026",
