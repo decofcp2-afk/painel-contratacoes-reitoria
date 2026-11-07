@@ -1,7 +1,7 @@
 {
   "source": "https://dadosabertos.compras.gov.br/modulo-arp/1_consultarARP",
   "scope": "Atas gerenciadas pela UASG 153167 — Colégio Pedro II",
-  "generatedAt": "2026-11-07T00:58:11Z",
+  "generatedAt": "2026-11-07T14:07:53Z",
   "items": [
     {
       "numeroAtaRegistroPreco": "00005/2023",
@@ -936,7 +936,7 @@
       "linkCompraPNCP": "https://pncp.gov.br/app/editais/42414284000102/2026/161",
       "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2026/161/3",
       "fonteOficial": "pncp",
-      "dataAtualizacaoPncp": "2026-11-04"
+      "dataAtualizacaoPncp": "2026-11-06"
     },
     {
       "numeroAtaRegistroPreco": "04308/2026",
@@ -1618,7 +1618,7 @@
       "linkCompraPNCP": "https://pncp.gov.br/app/editais/42414284000102/2026/161",
       "linkAtaPNCP": "https://pncp.gov.br/app/atas/42414284000102/2026/161/34",
       "fonteOficial": "pncp",
-      "dataAtualizacaoPncp": "2026-11-03"
+      "dataAtualizacaoPncp": "2026-11-06"
     },
     {
       "numeroAtaRegistroPreco": "00009/2025",
