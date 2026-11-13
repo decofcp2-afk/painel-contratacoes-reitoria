@@ -1,7 +1,7 @@
 {
   "source": "https://dadosabertos.compras.gov.br/modulo-arp/1_consultarARP",
   "scope": "Atas gerenciadas pela UASG 153167 — Colégio Pedro II",
-  "generatedAt": "2026-11-13T01:10:28Z",
+  "generatedAt": "2026-11-13T16:30:58Z",
   "items": [
     {
       "numeroAtaRegistroPreco": "00005/2023",
@@ -9135,15 +9135,15 @@
       "dataAssinatura": "2025-07-21",
       "dataVigenciaInicial": "2025-07-22",
       "dataVigenciaFinal": "2027-07-22",
-      "statusAta": "Ata de Registro de Preços",
+      "statusAta": "Cancelada",
       "objeto": "Contratação de serviços  contínuos  de serviços de limpeza, asseio e conservação, com fornecimento de materiais e equipamentos, a serem executados com regime de dedicação exclusiva de mão de obra para o Colégio Pedro II.",
-      "ataExcluido": false,
+      "ataExcluido": true,
       "numeroControlePncpAta": "42414284000102-1-000071/2025-000003",
       "idCompra": "15316705900062025",
       "possibilidadeAdesao": false,
       "numeroProcesso": null,
       "fonteOficial": "pncp",
-      "dataAtualizacaoPncp": "2026-06-17"
+      "dataAtualizacaoPncp": "2026-11-13"
     },
     {
       "numeroAtaRegistroPreco": "90008/2026",
