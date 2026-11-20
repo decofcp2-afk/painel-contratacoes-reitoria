@@ -6,21 +6,56 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from email.utils import parsedate_to_datetime
 
 BASE = "https://pncp.gov.br/api/consulta/v1/"
 CNPJ = "42414284000102"
+MAX_RATE_LIMIT_WAIT = 120
+
+
+class PncpRateLimitError(Exception):
+    """O PNCP manteve o limite de requisições ou pediu uma espera longa."""
+
+
+def retry_after_seconds(value):
+    try:
+        if value and value.isascii() and value.isdecimal():
+            return int(value)
+        retry_at = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return 0
+    if retry_at.tzinfo is None:
+        retry_at = retry_at.replace(tzinfo=dt.timezone.utc)
+    return max(0, (retry_at - dt.datetime.now(dt.timezone.utc)).total_seconds())
 
 
 def request_json(url):
-    for attempt in range(3):
+    req = urllib.request.Request(url, headers={"Accept": "application/json"})
+    # Espaça as consultas de detalhe, que são feitas em sequência.
+    time.sleep(1)
+    waited = 0
+    for attempt in range(4):
         try:
-            req = urllib.request.Request(url, headers={"Accept": "application/json"})
             with urllib.request.urlopen(req, timeout=30) as response:
                 return None if response.status == 204 else json.load(response)
-        except (urllib.error.URLError, OSError):
-            if attempt == 2:
+        except urllib.error.HTTPError as error:
+            if error.code == 429:
+                delay = max(10 * 2 ** attempt, retry_after_seconds(error.headers.get("Retry-After")))
+                error.close()
+                if attempt == 3 or waited + delay > MAX_RATE_LIMIT_WAIT:
+                    raise PncpRateLimitError("PNCP retornou HTTP 429; consulta interrompida") from error
+                waited += delay
+                print(f"PNCP retornou HTTP 429; nova tentativa em {delay:.0f} s", flush=True)
+            elif 500 <= error.code < 600 and attempt < 3:
+                error.close()
+                delay = 2 ** attempt
+            else:
                 raise
-            time.sleep(2 ** attempt)
+        except OSError:
+            if attempt == 3:
+                raise
+            delay = 2 ** attempt
+        time.sleep(delay)
 
 
 def purchase_path(identifier):

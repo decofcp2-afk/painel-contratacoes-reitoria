@@ -9,9 +9,15 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+if __package__:
+    from .update_atas_pncp import BASE as PNCP_BASE, PncpRateLimitError, supplement
+else:
+    from update_atas_pncp import BASE as PNCP_BASE, PncpRateLimitError, supplement
+
 ENDPOINT = "https://dadosabertos.compras.gov.br/modulo-arp/1_consultarARP"
 UASG = 153167
 OUTPUT = Path(__file__).resolve().parents[1] / "atas-data.json"
+MAX_PUBLISHED_AGE = dt.timedelta(hours=48)
 FIELDS = (
     "numeroAtaRegistroPreco", "codigoUnidadeGerenciadora", "nomeUnidadeGerenciadora",
     "codigoOrgao", "nomeOrgao", "linkAtaPNCP", "linkCompraPNCP", "numeroCompra",
@@ -75,8 +81,36 @@ def collect(fetch=fetch_page, now=None, uasg=UASG):
     }
 
 
+def recent_publication(output, now):
+    try:
+        payload = json.loads(output.read_text(encoding="utf-8"))
+        sources = payload["sources"]
+        if payload["source"] != ENDPOINT or not isinstance(sources, list) or PNCP_BASE + "atas" not in sources:
+            return None
+        items = payload["items"]
+        if not isinstance(items, list) or not items or any(
+            str(row["codigoUnidadeGerenciadora"]) != str(UASG) for row in items
+        ):
+            return None
+        published_at = dt.datetime.fromisoformat(payload["generatedAt"])
+        if published_at.tzinfo and dt.timedelta(0) <= now - published_at < MAX_PUBLISHED_AGE:
+            return payload["generatedAt"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    return None
+
+
 def main():
-    payload = collect_combined()
+    try:
+        payload = collect_combined()
+    except PncpRateLimitError:
+        published_at = None
+        if os.environ.get("ALLOW_RECENT_ATAS_ON_PNCP_429") == "true":
+            published_at = recent_publication(OUTPUT, dt.datetime.now(dt.timezone.utc))
+        if published_at is None:
+            raise
+        print(f"::warning::PNCP retornou HTTP 429. Base de {published_at} preservada, sem atualização nesta execução.")
+        return
     temporary = OUTPUT.with_suffix(".json.tmp")
     temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary, OUTPUT)
@@ -84,10 +118,6 @@ def main():
 
 
 def collect_combined(now=None, uasg=UASG):
-    try:
-        from .update_atas_pncp import supplement
-    except ImportError:
-        from update_atas_pncp import supplement
     try:
         payload = collect(now=now, uasg=uasg)
     except ValueError as error:
